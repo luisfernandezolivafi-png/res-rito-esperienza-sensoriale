@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>R.E.S.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Doto:ROND,wght@0,100..900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Handjet:wght@100..900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --phosphor: #39FF14;
+    --pantone-485: #DA291C;
+    --bg-black: #0A0A0A;
+  }
+  @property --accent-live{
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #DA291C;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html, body{
+    width:100%; height:100%;
+    background: var(--bg-black);
+    overflow:hidden;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
+  #app{ position:relative; width:100%; height:100vh; height:100dvh; }
+
+  .phase{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none;
+    transition: opacity 0.6s ease;
+  }
+  .phase.active{ opacity:1; pointer-events:auto; }
+
+  /* ---------- FASE 0: NESSUN SEGNALE ---------- */
+  #phase0{ flex-direction:column; background: var(--bg-black); }
+  #phase0 .noSignal{
+    font-family:'VT323', monospace;
+    color: var(--phosphor);
+    font-size: clamp(2.2rem, 9vw, 3.6rem);
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 6px rgba(57,255,20,0.55), 0 0 14px rgba(57,255,20,0.25);
+    animation: blinkSignal 1.1s steps(1, end) infinite;
+  }
+  #phase0 .subPrompt{
+    font-family:'VT323', monospace;
+    color: var(--phosphor);
+    opacity:0.75;
+    font-size: clamp(0.85rem, 2.6vw, 1.1rem);
+    letter-spacing:0.05em;
+    margin-top: 0.6em;
+  }
+  #phase0::before{
+    content:"";
+    position:absolute; inset:0; pointer-events:none;
+    background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 3px);
+    mix-blend-mode: overlay;
+  }
+  @keyframes blinkSignal{ 0%,49%{ opacity:1; } 50%,100%{ opacity:0; } }
+
+  #debugCounter{
+    position:fixed; bottom:10px; right:14px;
+    font-family:'VT323', monospace;
+    color: rgba(57,255,20,0.35);
+    font-size: 0.85rem; letter-spacing:0.05em; z-index: 999;
+  }
+
+  /* ---------- FASE 1: SOVRASTIMOLO ---------- */
+  #phase1{
+    background-image: url('sfondo_windows_xp.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow:hidden; justify-content:flex-start; align-items:flex-start;
+  }
+  .cloud{ position:absolute; background: rgba(255,255,255,0.85); border-radius:50%; filter: blur(1px); }
+
+  .taskbar{
+    position:absolute; left:0; right:0; bottom:0; height:30px; z-index:15;
+    background:#C0C0C0;
+    display:flex; align-items:center; gap:6px; padding:0 4px;
+    box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -1px 0 #404040;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .taskbar .startBtn{
+    display:flex; align-items:center; gap:4px;
+    height:22px; padding:0 8px 0 4px;
+    background:#C0C0C0; font-weight:bold; font-size:12px;
+    box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #FFFFFF, inset -2px -2px 0 #808080, inset 2px 2px 0 #DFDFDF;
+  }
+  .taskbar .startBtn .flag{ font-size:15px; }
+  .taskbar .divider{ width:2px; height:22px; box-shadow: inset -1px 0 0 #808080, inset 1px 0 0 #FFFFFF; }
+  .taskbar .taskbarClock{
+    margin-left:auto; height:22px; display:flex; align-items:center; padding:0 10px;
+    font-size:12px; color:#000;
+    box-shadow: inset -1px -1px 0 #FFFFFF, inset 1px 1px 0 #808080;
+  }
+
+  .desktopIcons{ position:absolute; top:14px; left:14px; display:flex; flex-direction:column; gap:22px; z-index:2; }
+  .desktopIcon{ display:flex; flex-direction:column; align-items:center; width:70px; font-family: Arial, Helvetica, sans-serif; }
+  .desktopIcon .glyph{
+    width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-size:20px;
+    background:#C0C0C0;
+    box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #FFFFFF, inset -2px -2px 0 #808080, inset 2px 2px 0 #DFDFDF;
+  }
+  .desktopIcon .label{ color:#fff; font-size:11px; text-align:center; text-shadow: 1px 1px 1px rgba(0,0,0,0.8); margin-top:3px; }
+
+  .win95Window{
+    position:absolute; width:230px; background:#C0C0C0;
+    box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #FFFFFF, inset -2px -2px 0 #808080, inset 2px 2px 0 #DFDFDF;
+    font-family: Arial, Helvetica, sans-serif;
+    transition: z-index 0s, filter 0.25s ease;
+    z-index:5;
+  }
+  .win95Window.stealFocus{ filter: drop-shadow(0 0 10px rgba(218,41,28,0.9)); z-index:50; }
+  .win95TitleBar{
+    height:20px; display:flex; align-items:center; justify-content:space-between; padding:0 4px;
+    background: linear-gradient(90deg, #ff0040, #ff8c00, #ffee00, #39ff14, #00e5ff, #7b2ff7);
+    color:#fff; font-size:11px; letter-spacing:0.02em; text-shadow:0 1px 1px rgba(0,0,0,0.5);
+  }
+  .win95TitleBar .ctrls span{
+    display:inline-block; width:14px; height:12px; margin-left:2px;
+    background:#C0C0C0; color:#000; font-size:9px; line-height:12px; text-align:center;
+    box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #FFFFFF;
+  }
+  .win95Body{ padding:8px; font-size:12px; color:#222; min-height:40px; }
+  #loadingWindow .barTrack{ height:14px; background:#fff; box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff; margin-top:6px; }
+  #loadingWindow .barFill{ height:100%; width:0%; background: repeating-linear-gradient(90deg, #000080 0 6px, #1084d0 6px 12px); }
+  #clockWindow{ top:10px; right:10px; width:150px; }
+  #clockWindow .win95Body{ font-family:'VT323', monospace; font-size:1.4rem; text-align:center; color:#000; padding:6px; }
+
+  .lateWindow{ display:none; }
+  .lateWindow.visible{ display:block; }
+
+  /* finestra video Fase 2: stessa chrome Win95 delle altre finestre, quasi a schermo
+     intero. display:none/.visible invece di .lateWindow perché qui serve un layout
+     flex (titlebar fissa + corpo che riempie il resto), non un blocco singolo */
+  .p2VideoWindow{
+    display:none;
+    top:5vh; left:5vw; width:90vw; height:90vh;
+    z-index:100;
+    transform:none; opacity:1;
+    transition: transform 620ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 500ms ease-out;
+  }
+  .p2VideoWindow.visible{ display:flex; flex-direction:column; }
+  /* stato di partenza dell'apertura: piccola, sopra la porta (.p2Door, riquadro in
+     .p2Ground: left:14%, bottom:8% di un'altezza di .p2Ground pari al 38% di #phase2 —
+     0.08*38vh ne converte l'8% percentuale in viewport-height assoluti), come se venisse
+     tirata fuori da lì. atDoor viene rimossa un frame dopo essere stata applicata (doppio
+     rAF, stesso accorgimento già usato per .p2-char.faded) cosicché il browser registri
+     davvero questo stato di partenza prima che la transition lo animi verso quello finale */
+  .p2VideoWindow.atDoor{
+    transform: translate(calc(-36vw + 32px), calc(50vh - 0.08 * 38vh - 48px)) scale(0.07);
+    opacity:0.2;
+  }
+  .p2VideoWindow .win95TitleBar{ flex-shrink:0; }
+  .p2VideoBody{
+    flex:1 1 auto; min-height:0;
+    background:#000;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .p2VideoBody video{ width:100%; height:100%; object-fit:contain; }
+
+  /* schermata finale: statica, nessun lampeggio — non serve alcuna verifica WCAG 2.3.1
+     perché non c'è alcuna variazione di luminosità nel tempo, solo comparsa/scomparsa
+     via display */
+  #p2ExitScreen{
+    display:none;
+    position:absolute; inset:0; z-index:200;
+    background: var(--pantone-485);
+    align-items:center; justify-content:center;
+  }
+  #p2ExitScreen.visible{ display:flex; }
+  #p2ExitScreen span{
+    font-family:'Doto', sans-serif;
+    font-variation-settings:'wght' 900, 'ROND' 0;
+    color:#fff; letter-spacing:0.08em;
+    font-size: clamp(3rem, 14vw, 9rem);
+  }
+
+  #dismissDialog{
+    display:none; position:absolute; top:50%; left:50%; transform: translate(-50%, -50%);
+    width:260px; background:#C0C0C0;
+    box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #FFFFFF, inset -2px -2px 0 #808080, inset 2px 2px 0 #DFDFDF;
+    font-family: Arial, Helvetica, sans-serif; z-index:60;
+  }
+  #dismissDialog.visible{ display:block; }
+  #dismissDialog .win95Body{ text-align:center; padding:16px 10px; }
+
+  #rebootDialog{
+    display:none; position:absolute; top:50%; left:50%; transform: translate(-50%, -50%);
+    width:260px; background:#C0C0C0; z-index:95;
+    box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #FFFFFF, inset -2px -2px 0 #808080, inset 2px 2px 0 #DFDFDF;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  #rebootDialog.visible{ display:block; }
+  #rebootDialog .win95Body{ text-align:center; padding:16px 10px; }
+
+  /* finestra "Escape": stesso bevel/chrome delle altre, campo colore Pantone 485C esatto.
+     Ancorata in basso a destra, sollevata (bottom:770px) abbastanza da restare sempre sopra
+     la pila di notifiche stacked (fino a 8 × 92px ≈ 750px di altezza dal basso, vedi STACK_VISIBLE_MAX) */
+  #escapeWindow{
+    display:none; position:absolute; right:10px; bottom:770px;
+    width:260px; z-index:94;
+  }
+  #escapeWindow.visible{ display:block; }
+  #escapeWindow.dissolving{
+    display:block; opacity:0;
+    transition: opacity 450ms ease;
+  }
+  .escapeBody{
+    background:#DA291C; color:#fff; text-align:center;
+    font-family:'VT323', monospace; font-size:2.4rem; letter-spacing:0.05em;
+    padding:22px 10px;
+    transition: opacity 120ms ease;
+  }
+  /* lieve flash di opacity ad ogni cambio testo (~1.05Hz con l'intervallo di 475ms in JS) —
+     ben sotto i 3 flash/sec WCAG 2.3.1 */
+  .escapeBody.flash{ opacity:0.3; }
+  .escapeBody.counting{ font-size:1.15rem; padding:16px 10px; }
+
+  /* ---------- notifiche: veri dialoghi d'errore Win95/98 in cascata ---------- */
+  .notifToast{
+    position:absolute; width:230px; background:#C0C0C0;
+    box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #FFFFFF, inset -2px -2px 0 #808080, inset 2px 2px 0 #DFDFDF;
+    font-family: Arial, Helvetica, sans-serif; z-index:20;
+    animation: toastIn 0.3s ease-out; pointer-events:none;
+  }
+  @keyframes toastIn{ from{ transform: translateY(14px); opacity:0; } to{ transform: translateY(0); opacity:1; } }
+
+  .notifTitlebar{
+    height:18px; display:flex; align-items:center; padding:0 5px;
+    background: linear-gradient(90deg, #000080, #1084d0);
+    color:#fff; font-size:11px; font-weight:bold; letter-spacing:0.01em;
+  }
+
+  .notifBody{ display:flex; align-items:flex-start; gap:10px; padding:12px 10px 8px; }
+
+  .notifIcon{
+    flex-shrink:0; width:26px; height:26px; position:relative;
+    display:flex; align-items:center; justify-content:center;
+  }
+  /* errore: cerchio bianco/nero con una X rossa */
+  .notifIcon-error{ border-radius:50%; background:#fff; border:2px solid #000; }
+  .notifIcon-error .notifIconGlyph{ color: var(--pantone-485); font-weight:bold; font-size:16px; line-height:1; }
+  /* avviso: triangolo nero/bianco con punto esclamativo rosso */
+  .notifIcon-warning .notifIconTriangle{
+    position:absolute; left:50%; top:0; transform:translateX(-50%);
+    width:0; height:0;
+    border-left:13px solid transparent; border-right:13px solid transparent;
+    border-bottom:23px solid #000;
+  }
+  .notifIcon-warning .notifIconTriangle::after{
+    content:""; position:absolute; left:-10px; top:5px;
+    width:0; height:0;
+    border-left:10px solid transparent; border-right:10px solid transparent;
+    border-bottom:15px solid #fff;
+  }
+  .notifIcon-warning .notifIconGlyph{
+    position:relative; z-index:1; margin-top:7px;
+    color: var(--pantone-485); font-weight:bold; font-size:13px; line-height:1;
+  }
+  /* sistema: rettangolo bianco/nero con angolo piegato */
+  .notifIcon-system .notifIconDoc{
+    width:20px; height:24px; background:#fff; border:2px solid #000;
+    clip-path: polygon(0 0, 65% 0, 100% 35%, 100% 100%, 0 100%);
+    position:relative;
+  }
+  .notifIcon-system .notifIconDoc::after{
+    content:""; position:absolute; right:-2px; top:-2px;
+    width:0; height:0;
+    border-left:8px solid transparent; border-top:8px solid var(--pantone-485);
+  }
+
+  .notifText{ flex:1; font-size:11.5px; color:#222; line-height:1.35; padding-top:2px; }
+
+  .notifButtonRow{ display:flex; justify-content:flex-end; padding:0 10px 10px; }
+  .notifButton{
+    min-width:64px; padding:3px 10px; font-size:11px; font-family:inherit; color:#000;
+    background:#C0C0C0; border:none;
+    box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #FFFFFF, inset -2px -2px 0 #808080, inset 2px 2px 0 #DFDFDF;
+  }
+
+  @keyframes glitchAnim{
+    0%{ transform: translate(0,0); filter:none; }
+    8%{ transform: translate(-14px,5px) scale(1.02); filter: hue-rotate(45deg) contrast(1.4) saturate(1.6); }
+    16%{ transform: translate(10px,-6px); filter: hue-rotate(-30deg) contrast(1.6); }
+    24%{ transform: translate(-11px,4px) skewX(2deg); filter: contrast(1.7) saturate(1.8); }
+    33%{ transform: translate(9px,-4px) skewX(-2deg); filter: hue-rotate(20deg); }
+    45%{ transform: translate(-6px,3px); filter: contrast(1.3); }
+    58%{ transform: translate(5px,-2px); filter: hue-rotate(10deg); }
+    72%{ transform: translate(-3px,1px); filter:none; }
+    100%{ transform: translate(0,0); filter:none; }
+  }
+  #phase1.glitching{ animation: glitchAnim 0.7s steps(2, jump-none); }
+  #phase1.glitching::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background: rgba(255,255,255,0.5); animation: glitchFlash 0.15s ease-out; z-index:100;
+  }
+  @keyframes glitchFlash{ from{ opacity:1; } to{ opacity:0; } }
+
+  /* canvas che disegna gli effetti procedurali: grana, glitch, figure binarie */
+  #fxCanvas{
+    position:absolute; inset:0; width:100%; height:100%;
+    pointer-events:none; z-index:70;
+  }
+
+  /* testo dello schermo intrappolato: font bitmap pixel-art, aberrazione cromatica
+     rosso/blu, appare/scompare con fade — mai un cut istantaneo */
+  .trappedMessage{
+    position:absolute; z-index:80; pointer-events:none;
+    font-family:'Press Start 2P', 'VT323', monospace;
+    color:#fff;
+    font-size: clamp(0.9rem, 3.4vw, 1.6rem);
+    line-height:1.5; letter-spacing:0.02em;
+    text-shadow: -2px 0 0 rgba(255,20,20,0.65), 2px 0 0 rgba(20,90,255,0.65), 0 0 2px #000;
+    opacity:0;
+    transition: opacity 180ms ease;
+  }
+  .trappedMessage.visible{ opacity:1; }
+  .tm-helpme{ top:16%; right:6%; text-align:right; }
+  .tm-please{ top:50%; left:6%; transform:translateY(-50%); text-align:left; }
+  .tm-trapped{ bottom:14%; right:8%; text-align:right; }
+
+  @keyframes meltDown{
+    0%{ transform: scaleY(1) skewX(0deg) translateY(0); border-radius:0; opacity:1; filter:none; }
+    12%{ transform: scaleY(1.05) skewX(-2deg) translateY(3px); filter: saturate(1.2); }
+    28%{ transform: scaleY(1.3) skewX(3deg) translateY(18px); border-radius: 0 0 25% 25% / 0 0 45% 45%; filter: blur(0.4px) saturate(1.4) hue-rotate(8deg); }
+    46%{ transform: scaleY(1.75) skewX(-4deg) translateY(55px); border-radius: 0 0 40% 40% / 0 0 70% 70%; filter: blur(0.9px) saturate(1.6) hue-rotate(-6deg); }
+    64%{ transform: scaleY(2.4) skewX(5deg) translateY(115px); border-radius: 0 0 48% 48% / 0 0 85% 85%; opacity:0.75; filter: blur(1.6px) saturate(1.8) hue-rotate(14deg); }
+    82%{ transform: scaleY(3.1) skewX(-3deg) translateY(190px); border-radius: 0 0 50% 50% / 0 0 94% 94%; opacity:0.35; filter: blur(2.4px) saturate(2) hue-rotate(-10deg); }
+    100%{ transform: scaleY(4) skewX(2deg) translateY(280px); border-radius: 0 0 50% 50% / 0 0 98% 98%; opacity:0; filter: blur(3.5px) saturate(0.6); }
+  }
+  .win95Window.melting{ animation: meltDown 3.4s cubic-bezier(0.6,0,0.9,0.4) forwards; transform-origin: top center; }
+  .win95Window.melting::after{
+    content:""; position:absolute; left:10%; right:10%; bottom:-2px; height:0;
+    background: linear-gradient(180deg, rgba(180,255,220,0.9) 0%, rgba(120,180,255,0.55) 40%, rgba(255,255,255,0) 100%);
+    filter: blur(0.5px);
+    animation: dripTrail 3.4s cubic-bezier(0.6,0,0.9,0.4) forwards;
+  }
+  @keyframes dripTrail{ 0%{ height:0; opacity:0.95; } 40%{ height:70px; opacity:0.8; } 70%{ height:150px; opacity:0.5; } 100%{ height:260px; opacity:0; } }
+
+  /* ---------- TERMINALE DI BOOT: transizione digitata a schermo intero verso la Fase 2 ---------- */
+  #terminalOverlay{
+    position:absolute; inset:0; z-index:90;
+    background:#0b0e0b; opacity:0; pointer-events:none;
+    transition: opacity 0.5s ease;
+  }
+  #terminalOverlay.visible{ opacity:1; pointer-events:auto; }
+  .terminalWindow{
+    width:100%; height:100%;
+    display:flex; flex-direction:column;
+  }
+  .terminalHeader{
+    display:flex; align-items:center; gap:6px; padding:10px 14px; flex-shrink:0;
+    background:#1a1d1a; border-bottom:1px solid rgba(57,255,20,0.2);
+  }
+  .terminalDot{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+  .terminalDot.red{ background:#ff5f56; }
+  .terminalDot.yellow{ background:#ffbd2e; }
+  .terminalDot.green{ background:#27c93f; }
+  .terminalTitle{
+    margin-left:8px; font-family:'VT323', monospace; color:rgba(57,255,20,0.6);
+    font-size:0.95rem; letter-spacing:0.05em;
+  }
+  .terminalBody{
+    flex:1; margin:0; padding:22px 28px; overflow-y:auto;
+    font-family:'VT323', monospace; color: var(--phosphor);
+    font-size: clamp(1rem, 2.4vw, 1.35rem); line-height:1.6;
+    text-shadow: 0 0 4px rgba(57,255,20,0.4);
+    white-space:pre-wrap; word-break:break-word;
+  }
+  .terminalBody::after{
+    content:'█'; display:inline-block; margin-left:2px;
+    animation: blinkSignal 1.1s steps(1, end) infinite;
+  }
+
+  /* ---------- FASE 2: SOGLIA LIMINALE ---------- */
+  /* niente position:relative qui: sovrascriverebbe (per specificità) il position:absolute
+     di .phase, azzerando l'altezza di #phase2 e rendendo tutto invisibile — vedi #app */
+  #phase2{
+    flex-direction:column; overflow:hidden;
+    /* il blu BSOD sta SOTTO le colline: la PNG ha il cielo trasparente, quindi il blu
+       si vede esattamente nella sagoma reale dell'orizzonte, non in un rettangolo netto */
+    background: url('sfondo_windows_xp_senza_cielo.png') center/cover no-repeat,
+                linear-gradient(180deg, #0000AA 0%, #000078 100%);
+  }
+  /* .p2Sky non disegna più colore proprio: il blu ora arriva da #phase2 stesso, visibile
+     in trasparenza nella sagoma del cielo della nuova PNG. Resta solo un contenitore di
+     layout per posizionare log e domanda nella porzione superiore dello schermo.
+     Le icone del desktop (.desktopIcons, z-index:2 già in regola condivisa) restano
+     sopra questo strato, come farebbero davvero sulla scrivania di un sistema in crash.
+
+     ALTEZZA: la sagoma delle colline in sfondo_windows_xp_senza_cielo.png è una linea
+     curva, non piatta — un rettangolo a percentuale fissa può restare sempre dentro il
+     cielo reale solo se non supera il punto in cui le colline sono più ALTE (cioè dove il
+     cielo è più piccolo). Misurato via analisi del canale alpha della PNG (3840×2160):
+     il primo pixel non completamente trasparente, cercato lungo l'intera larghezza
+     dell'immagine, appare al minimo a y=1123px (x≈1096px) = 51.99% dell'altezza —
+     scelta la soglia più prudente (qualunque alpha>0, non solo i pixel pienamente
+     opachi, per non sottostimare l'antialiasing morbido del bordo). Questo 51.99% è
+     anche il caso peggiore per qualunque proporzione di finestra: con background-size:cover,
+     una finestra più larga del 16:9 dell'immagine ritaglia sopra e sotto in modo simmetrico,
+     il che sposta il punto dell'orizzonte visibile ANCORA più in basso (mai più in alto) —
+     quindi il vincolo più stretto resta sempre quello misurato sull'immagine non ritagliata.
+     height:49% = 51.99% arrotondato per difetto, meno un margine di sicurezza aggiuntivo di
+     ~3 punti percentuali, così che il contenuto di questo contenitore (log e, dopo, .p2PromptArea
+     — quest'ultima ora sovrapposta in absolute su tutta l'altezza del cielo, quindi già
+     contenuta dal suo overflow:hidden) resti sempre ben dentro il blu, mai sconfinato sul
+     prato, anche con un margine di errore nella misurazione. .p2Ground (bottom:0, height:38%)
+     non va aggiornato di conseguenza: le due altezze non devono sommare a 100%, .p2Ground
+     serve solo a posizionare porta e cursori sul prato, non a delimitare il cielo */
+  #phase2 .p2Sky{
+    position:absolute; left:0; right:0; top:0; height:49%; z-index:1;
+    overflow:hidden; padding:8vh 6vw 0;
+    pointer-events:none;
+    display:flex; flex-direction:column;
+  }
+  /* log di sistema: le righe vengono digitate una alla volta (runP2BsodLog, JS) e si
+     accumulano come un vero terminale — il contenitore ha altezza fissa e overflow:hidden;
+     restare scrollabile via scriptable scrollTop pur senza barra visibile è previsto dalla
+     spec, quindi le righe più vecchie escono dall'inquadratura in alto man mano che il
+     terminale scrolla in fondo ad ogni nuova riga. Parte solo quando #phase2 diventa .active
+     (runP2BsodLog chiamata da initPhase2), mai al semplice caricamento della pagina */
+  .p2BsodLog{
+    position:relative; flex:1 1 auto; min-height:0; overflow:hidden;
+  }
+  .p2BsodLine{
+    font-family:'VT323', monospace; color:#fff;
+    font-size: clamp(0.85rem, 2vw, 1.05rem);
+    line-height:1.7; letter-spacing:0.02em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    animation: p2BsodJitter 2.6s steps(1, end) infinite;
+    animation-delay: calc(var(--gd, 0) * -0.35s);
+  }
+  .p2BsodLine-hint{ opacity:0.7; margin-top:14px; }
+  @keyframes p2BsodJitter{
+    0%, 82%{ transform: translateX(0); }
+    84%{ transform: translateX(-3px); }
+    86%{ transform: translateX(2px); }
+    88%, 100%{ transform: translateX(0); }
+  }
+  /* dissolvenza dell'intero log a fine lettura, prima che lo schermo blu resti vuoto */
+  .p2BsodTrack.clearing .p2BsodLine{
+    opacity:0; transition: opacity 350ms ease;
+  }
+
+  /* la domanda prende il posto del log solo a schermo blu già vuoto (mai in sovrapposizione):
+     posizionata in absolute su tutta .p2Sky (che è già positioned) invece che nel flusso
+     flex della colonna, così può centrarsi su tutta l'altezza/larghezza del cielo anziché
+     restare ancorata in basso insieme al log */
+  .p2PromptArea{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:0 5vw;
+    opacity:0; transition: opacity 700ms ease;
+  }
+  .p2PromptArea.visible{ opacity:1; }
+  /* "il sistema che vacilla": ogni lettera un peso diverso, mai uniforme */
+  .p2PromptChar{ font-family:'Handjet', monospace; display:inline-block; }
+  /* didascalia fredda del sistema, non la domanda: Handjet resta riservato solo al testo
+     rivolto all'utente. Riuso lo stesso trattamento già in uso per gli altri messaggi di
+     sistema in quest'area (.p2StillHere: Archivo, opacità ridotta) per coerenza visiva */
+  .p2PromptHint{
+    font-family:'Archivo', sans-serif;
+    font-size: clamp(0.95rem, 2.2vw, 1.3rem); letter-spacing:0.02em;
+    color: rgba(237,237,237,0.55);
+    margin-top:0.6em;
+  }
+
+  /* prato: nessuno sfondo proprio — è la stessa foto di #phase2 (quella della Fase 1)
+     a mostrare le colline verdi qui sotto; questo div serve solo a posizionare porta e cursori */
+  #phase2 .p2Ground{
+    position:absolute; left:0; right:0; bottom:0; height:38%; z-index:1;
+    pointer-events:none;
+  }
+
+  /* porta pixelata "EXIT" nel prato: cornice Pantone 485C a blocchi netti (nessun
+     antialiasing), apertura interna scura per leggersi come varco, non come macchia */
+  .p2Door{
+    position:absolute; left:14%; bottom:8%; width:64px; height:96px; z-index:2;
+    background:#DA291C;
+    clip-path: polygon(0 100%, 0 8px, 8px 8px, 8px 0, 56px 0, 56px 8px, 64px 8px, 64px 100%);
+    pointer-events:none;
+  }
+  .p2DoorInner{
+    position:absolute; left:6px; right:6px; top:14px; bottom:0;
+    background:#0a0a0a;
+  }
+  /* maniglia: pallino Pantone 485C, non centrato, ad altezza realistica da presa */
+  .p2DoorHandle{
+    position:absolute; left:8px; top:56%; width:7px; height:7px;
+    border-radius:50%;
+    background: var(--pantone-485);
+  }
+  /* fuori da .p2Door apposta: il clip-path del genitore taglierebbe via qualunque
+     figlio posizionato al di fuori del suo riquadro (es. un'etichetta a top negativo) */
+  .p2DoorLabel{
+    position:absolute; left:calc(14% + 32px); bottom:calc(8% + 96px + 6px);
+    transform:translateX(-50%);
+    font-family:'Doto', sans-serif;
+    font-variation-settings:'wght' 900, 'ROND' 0;
+    color:#fff; font-size:0.85rem; letter-spacing:0.08em;
+    text-shadow: 2px 2px 0 #000;
+    white-space:nowrap;
+  }
+
+  /* cursori del mouse duplicati con offset crescente: puro ghosting decorativo */
+  .p2CursorGhosts{
+    position:absolute; left:32%; bottom:14%; width:40px; height:40px; z-index:2;
+    pointer-events:none;
+  }
+  .p2Cursor{
+    position:absolute; left:0; top:0; width:16px; height:22px;
+    background:#fff;
+    clip-path: polygon(0 0, 0 78%, 22% 60%, 38% 100%, 52% 92%, 36% 55%, 65% 55%);
+    box-shadow: 1px 1px 0 #000, -1px 0 0 #000;
+  }
+  .p2Cursor:nth-child(1){ transform: translate(0px, 0px); opacity:1; }
+  .p2Cursor:nth-child(2){ transform: translate(6px, 6px); opacity:0.65; }
+  .p2Cursor:nth-child(3){ transform: translate(12px, 12px); opacity:0.5; }
+  .p2Cursor:nth-child(4){ transform: translate(18px, 18px); opacity:0.35; }
+  .p2Cursor:nth-child(5){ transform: translate(24px, 24px); opacity:0.2; }
+
+  #p2Canvas{
+    position:absolute; inset:0; width:100%; height:100%;
+    pointer-events:none; z-index:8;
+  }
+
+  .p2PromptLine{
+    color:#fff;
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    line-height:1.4;
+  }
+  .p2InputLine{
+    display:flex; align-items:baseline; justify-content:center; gap:8px; flex-wrap:wrap;
+    margin-top:0.5em;
+    font-family:'VT323', monospace; color:#fff;
+    font-size: clamp(1.3rem, 3.6vw, 2rem);
+  }
+  .p2Chevron{ color: rgba(255,255,255,0.7); }
+  .p2Answer{ display:inline-flex; flex-wrap:wrap; align-items:baseline; }
+  .p2Answer.dissolving .p2-char{
+    transition: opacity 900ms ease;
+    opacity:0;
+  }
+  .p2-char{
+    display:inline-block;
+    color: var(--accent-live);
+    filter: grayscale(0);
+    text-shadow: 0 0 5px rgba(218,41,28,0.35);
+    transition: filter 800ms ease-out;
+  }
+  .p2-char.faded{ filter: grayscale(1); }
+  .p2Caret{
+    display:inline-block; width:0.45em; height:1.05em;
+    background: var(--accent-live); margin-left:1px;
+    animation: blinkSignal 1s steps(1, end) infinite;
+  }
+
+  .p2StillHere{
+    position:absolute; left:50%; bottom:12%; transform:translateX(-50%); z-index:3;
+    font-family:'Archivo', sans-serif; font-size:0.85rem;
+    color: rgba(237,237,237,0.55); letter-spacing:0.02em;
+    opacity:0; pointer-events:none;
+    transition: opacity 1.1s ease;
+  }
+  .p2StillHere.visible{ opacity:1; }
+
+  .p2GhostCursor{
+    position:fixed; left:0; top:0; width:9px; height:20px; z-index:6;
+    background: rgba(237,237,237,0.16); border-radius:2px;
+    pointer-events:none; will-change: transform;
+    opacity:0; transition: opacity 700ms ease;
+  }
+  .p2GhostCursor.visible{ opacity:1; }
+
+  .p2Echo{
+    position:fixed; left:0; top:0; width:14px; height:14px; border-radius:50%; z-index:7;
+    background: var(--accent-live);
+    opacity:0; pointer-events:none;
+    transform: translate(-50%,-50%) scale(0);
+  }
+  .p2Echo.pulse{ animation: p2EchoPulse 700ms ease-out; }
+  @keyframes p2EchoPulse{
+    0%{ transform: translate(-50%,-50%) scale(0.4); opacity:0.9; }
+    40%{ transform: translate(-50%,-50%) scale(1.7); opacity:0.6; }
+    100%{ transform: translate(-50%,-50%) scale(2.6); opacity:0; }
+  }
+
+  @keyframes agePalette{ from{ --accent-live:#DA291C; } to{ --accent-live:#4A0E0E; } }
+  #phase2.active{ animation: agePalette 60s linear forwards; }
+
+  /* ---------- FASE 3: DOPO IL VIDEO ---------- */
+  #phase3{ flex-direction:column; overflow:hidden; background: var(--bg-black); }
+
+  /* stesso gradiente BSOD della Fase 2 (nessuna variabile CSS condivisa esisteva per
+     questo colore prima d'ora — ripetuto qui, come già fa il resto del file per la chrome
+     Win95 ripetuta identica su più finestre invece di un'astrazione dedicata) */
+  .p3Bsod{
+    position:absolute; inset:0; z-index:2;
+    background: linear-gradient(180deg, #0000AA 0%, #000078 100%);
+    overflow:hidden;
+    transform-origin:50% 50%;
+  }
+  .p3BsodFill{ padding:4vh 5vw; }
+  .p3BsodLine{
+    font-family:'VT323', monospace; color:#fff;
+    font-size: clamp(0.85rem, 2vw, 1.05rem);
+    line-height:1.7; letter-spacing:0.02em;
+  }
+  /* spegnimento CRT: collasso verticale a linea sottile (con lieve aumento di luminosità/
+     contrasto, fenomeno fisico reale dei tubi catodici), poi collasso orizzontale a un
+     punto. Transizione UNICA e non ripetuta (~410ms totali) — non rientra nella soglia
+     WCAG 2.3.1 sui flash ripetuti, e resta comunque breve e non troppo intensa */
+  .p3Bsod.collapsingY{ animation: p3CrtCollapseY 260ms ease-in forwards; }
+  .p3Bsod.collapsingX{ animation: p3CrtCollapseX 150ms ease-in forwards; }
+  @keyframes p3CrtCollapseY{
+    0%{ transform:scaleY(1) scaleX(1); filter:brightness(1) contrast(1); }
+    100%{ transform:scaleY(0.012) scaleX(1); filter:brightness(1.7) contrast(1.35); }
+  }
+  @keyframes p3CrtCollapseX{
+    0%{ transform:scaleY(0.012) scaleX(1); filter:brightness(1.7) contrast(1.35); }
+    100%{ transform:scaleY(0.012) scaleX(0.02); filter:brightness(2.1) contrast(1.6); }
+  }
+
+  /* salvaschermo: orologio analogico disegnato a canvas (nessun asset importato), unico
+     elemento della Fase 3 a riposo — resta così finché non si preme un tasto */
+  #p3ClockCanvas{ position:absolute; inset:0; width:100%; height:100%; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div id="phase0" class="phase active">
+    <div class="noSignal">NESSUN SEGNALE</div>
+    <div class="subPrompt">reagisci per attivare</div>
+  </div>
+
+  <div id="phase1" class="phase">
+    <div class="cloud" style="width:90px; height:34px; top:8%; left:15%;"></div>
+    <div class="cloud" style="width:60px; height:24px; top:14%; left:60%;"></div>
+    <div class="cloud" style="width:110px; height:38px; top:5%; left:70%;"></div>
+
+    <div class="desktopIcons">
+      <div class="desktopIcon"><div class="glyph">🖥</div><div class="label">Risorse del<br>computer</div></div>
+      <div class="desktopIcon"><div class="glyph">🗑</div><div class="label">Cestino</div></div>
+      <div class="desktopIcon"><div class="glyph">📁</div><div class="label">Documenti</div></div>
+    </div>
+
+    <div class="win95Window lateWindow" id="loadingWindow" style="top:60px; left:110px;">
+      <div class="win95TitleBar"><span>sincronizzazione.exe</span><span class="ctrls"><span>_</span><span>□</span><span>×</span></span></div>
+      <div class="win95Body">Aggiornamento feed in corso...<div class="barTrack"><div class="barFill" id="loadingBarFill"></div></div></div>
+    </div>
+
+    <div class="win95Window lateWindow" id="focusWindow" style="top:220px; left:130px;">
+      <div class="win95TitleBar"><span>nuovo_messaggio.exe</span><span class="ctrls"><span>_</span><span>□</span><span>×</span></span></div>
+      <div class="win95Body" id="focusWindowBody">Qualcuno ha risposto al tuo commento.</div>
+    </div>
+
+    <div class="win95Window lateWindow" id="clockWindow">
+      <div class="win95TitleBar"><span>orario_sistema</span><span class="ctrls"><span>_</span></span></div>
+      <div class="win95Body" id="clockDisplay">00:00:00</div>
+    </div>
+
+    <div class="win95Window" id="escapeWindow">
+      <div class="win95TitleBar"><span>escape.exe</span><span class="ctrls"><span>_</span><span>□</span><span>×</span></span></div>
+      <div class="win95Body escapeBody" id="escapeBody">ESCAPE</div>
+    </div>
+
+    <div id="dismissDialog">
+      <div class="win95TitleBar"><span>Notifiche</span><span class="ctrls"><span>×</span></span></div>
+      <div class="win95Body">Premi un tasto qualsiasi per rimuovere le notifiche.</div>
+    </div>
+
+    <div id="rebootDialog">
+      <div class="win95TitleBar"><span>Vuoi riavviare il sistema?</span><span class="ctrls"><span>×</span></span></div>
+      <div class="win95Body">Premi qualsiasi tasto per riavviare.</div>
+    </div>
+
+    <div id="notifLayer" style="position:absolute; inset:0; pointer-events:none; z-index:20;"></div>
+
+    <div class="taskbar">
+      <div class="startBtn"><span class="flag">🪟</span><span>Start</span></div>
+      <div class="divider"></div>
+      <div class="taskbarClock" id="taskbarClock">00:00:00</div>
+    </div>
+
+    <canvas id="fxCanvas"></canvas>
+
+    <div class="trappedMessage tm-helpme" id="trappedMsg0">AIUTO</div>
+    <div class="trappedMessage tm-please" id="trappedMsg1">PER FAVORE</div>
+    <div class="trappedMessage tm-trapped" id="trappedMsg2">SONO INTRAPPOLATO</div>
+
+    <div id="terminalOverlay">
+      <div class="terminalWindow">
+        <div class="terminalHeader">
+          <span class="terminalDot red"></span><span class="terminalDot yellow"></span><span class="terminalDot green"></span>
+          <span class="terminalTitle">soglia_liminale.sys</span>
+        </div>
+        <pre class="terminalBody" id="terminalBody"></pre>
+      </div>
+    </div>
+  </div>
+
+  <div id="phase2" class="phase">
+    <div class="desktopIcons">
+      <div class="desktopIcon"><div class="glyph">🖥</div><div class="label">Risorse del<br>computer</div></div>
+      <div class="desktopIcon"><div class="glyph">🗑</div><div class="label">Cestino</div></div>
+      <div class="desktopIcon"><div class="glyph">📁</div><div class="label">Documenti</div></div>
+    </div>
+
+    <div class="p2Sky">
+      <div class="p2BsodLog" id="p2BsodLog">
+        <!-- popolato solo da runP2BsodLog(): le righe vengono digitate una alla volta,
+             mai presenti staticamente nel markup (eviterebbe un flash di testo pre-digitazione) -->
+        <div class="p2BsodTrack" id="p2BsodTrack"></div>
+      </div>
+
+      <div class="p2PromptArea" id="p2PromptArea">
+        <div class="p2PromptLine" id="p2Prompt">cosa stavi per fare prima di aprire questo?</div>
+        <div class="p2PromptHint">Premere "enter" per introdurre la risposta.</div>
+        <div class="p2InputLine">
+          <span class="p2Chevron">&gt;</span>
+          <span class="p2Answer" id="p2Answer"><span class="p2Caret" id="p2Caret"></span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="p2Ground">
+      <div class="p2DoorLabel">EXIT</div>
+      <div class="p2Door"><div class="p2DoorInner"><div class="p2DoorHandle"></div></div></div>
+      <div class="p2CursorGhosts">
+        <span class="p2Cursor"></span>
+        <span class="p2Cursor"></span>
+        <span class="p2Cursor"></span>
+        <span class="p2Cursor"></span>
+        <span class="p2Cursor"></span>
+      </div>
+    </div>
+
+    <canvas id="p2Canvas"></canvas>
+
+    <div class="p2StillHere" id="p2StillHere">ci sei ancora?</div>
+
+    <span class="p2GhostCursor" id="p2GhostCursor"></span>
+    <span class="p2Echo" id="p2Echo"></span>
+
+    <!-- il tag <video> vero e proprio non è qui: viene creato e precaricato in Fase 1
+         (preloadP2Video) e spostato dentro .p2VideoBody solo quando la finestra si apre,
+         così non parte mai un secondo download dello stesso file -->
+    <div class="win95Window p2VideoWindow" id="p2VideoWindow">
+      <div class="win95TitleBar"><span>memoria_04.rec</span><span class="ctrls"><span>_</span><span>□</span><span>×</span></span></div>
+      <div class="p2VideoBody" id="p2VideoBody"></div>
+    </div>
+
+    <div id="p2ExitScreen"><span>EXIT</span></div>
+
+    <!-- TODO: rilevamento presenza via fotocamera — funzionalità ancora in fase
+         di decisione, va agganciata qui una volta definita. Non implementata. -->
+
+    <!-- Elemento condiviso dai 6 cue audio a eventi (AUDIO_1..AUDIO_6.mp3): src cambiato
+         al volo da playCue(), mai un unico brano continuo — vedi la sezione AUDIO più sotto -->
+    <audio id="p2AmbientAudio" preload="none"></audio>
+  </div>
+
+  <div id="phase3" class="phase">
+    <div class="p3Bsod" id="p3Bsod">
+      <div class="p3BsodFill" id="p3BsodFill"></div>
+    </div>
+    <canvas id="p3ClockCanvas"></canvas>
+  </div>
+
+</div>
+
+<div id="debugCounter"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ============================================================
+  // CONTATORE DI SESSIONE
+  // ============================================================
+  let sessionCount = 0;
+  const STORAGE_KEY = 'res_session_count';
+  try {
+    const stored = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+    sessionCount = stored + 1;
+    localStorage.setItem(STORAGE_KEY, String(sessionCount));
+  } catch(e) { sessionCount = 1; }
+  document.getElementById('debugCounter').textContent = sessionCount;
+
+  // ============================================================
+  // MOTORE FX — canvas procedurale: grana, glitch, crepe, figure, inchiostro
+  // ============================================================
+  const FX = (function(){
+    const canvas = document.getElementById('fxCanvas');
+    const ctx = canvas.getContext('2d');
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let W = 0, H = 0;
+
+    function resize(){
+      const rect = canvas.getBoundingClientRect();
+      W = rect.width; H = rect.height;
+      canvas.width = Math.max(1, W * dpr);
+      canvas.height = Math.max(1, H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+
+    // --- grana procedurale: generata una volta, riusata come pattern ---
+    const noiseTile = document.createElement('canvas');
+    noiseTile.width = 128; noiseTile.height = 128;
+    (function buildNoise(){
+      const nctx = noiseTile.getContext('2d');
+      const img = nctx.createImageData(128, 128);
+      for (let i = 0; i < img.data.length; i += 4){
+        const v = Math.random() * 255;
+        img.data[i] = v; img.data[i+1] = v; img.data[i+2] = v;
+        img.data[i+3] = Math.random() * 40;
+      }
+      nctx.putImageData(img, 0, 0);
+    })();
+    let noisePattern = null;
+    // grana generica riusabile su qualsiasi contesto/canvas (es. il canvas della Fase 2)
+    function paintGrain(targetCtx, w, h, opacity){
+      if (!noisePattern) noisePattern = ctx.createPattern(noiseTile, 'repeat');
+      targetCtx.save();
+      targetCtx.globalAlpha = opacity;
+      targetCtx.globalCompositeOperation = 'overlay';
+      targetCtx.fillStyle = noisePattern;
+      targetCtx.fillRect(0, 0, w, h);
+      targetCtx.restore();
+    }
+    function drawGrain(opacity){ paintGrain(ctx, W, H, opacity); }
+
+    // --- burst glitch/datamosh: bande orizzontali sfasate, colori scambiati ---
+    function drawGlitchBurst(progress){
+      const bands = 24;
+      const bandH = H / bands;
+      ctx.save();
+      for (let i = 0; i < bands; i++){
+        const y = i * bandH;
+        const offset = (Math.random() - 0.5) * 70 * (1 - progress);
+        const hue = Math.random() * 360;
+        ctx.fillStyle = `hsla(${hue},90%,60%,${0.2 * (1 - progress)})`;
+        ctx.fillRect(offset, y, W, bandH * 0.72);
+      }
+      ctx.restore();
+    }
+
+    // --- scanline digitali cromatiche ad alta intensità (screen-tear / RGB split) ---
+    function drawChromaticScanlines(progress){
+      ctx.save();
+      const lineH = 2;
+      const step = lineH * 2;
+      const count = Math.ceil(H / step);
+      ctx.globalCompositeOperation = 'screen';
+      for (let i = 0; i < count; i++){
+        const y = i * step;
+        const shift = (Math.random() - 0.5) * 22 * progress;
+        const hue = (i * 13 + performance.now() * 0.05) % 360;
+        ctx.fillStyle = `hsla(${hue},95%,65%,${0.4 * progress})`;
+        ctx.fillRect(-shift, y, W + Math.abs(shift) * 2, lineH);
+        ctx.fillStyle = `rgba(255,0,110,${0.22 * progress})`;
+        ctx.fillRect(-shift - 3, y, W, lineH);
+        ctx.fillStyle = `rgba(0,255,210,${0.22 * progress})`;
+        ctx.fillRect(-shift + 3, y, W, lineH);
+      }
+      ctx.restore();
+    }
+
+    // --- schermo intrappolato: finestre di sistema finte e congelate, ricostruite
+    // sul canvas (non le vere finestre DOM, già sciolte a questo punto) ---
+    function drawFrozenWindowGhost(x, y, w, h, title){
+      ctx.save();
+      ctx.fillStyle = '#C0C0C0';
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+      const grad = ctx.createLinearGradient(x, y, x + w, y);
+      grad.addColorStop(0, '#ff0040'); grad.addColorStop(0.2, '#ff8c00');
+      grad.addColorStop(0.4, '#ffee00'); grad.addColorStop(0.6, '#39ff14');
+      grad.addColorStop(0.8, '#00e5ff'); grad.addColorStop(1, '#7b2ff7');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, 20);
+      ctx.fillStyle = '#fff';
+      ctx.font = "11px Arial, sans-serif";
+      ctx.fillText(title, x + 4, y + 14);
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      for (let i = 0; i < 3; i++) ctx.fillRect(x + 8, y + 30 + i * 14, w - 16, 6);
+      ctx.restore();
+    }
+    function drawFrozenDesktop(){
+      drawFrozenWindowGhost(110, 60, 230, 70, 'sincronizzazione.exe');
+      drawFrozenWindowGhost(130, 220, 230, 60, 'nuovo_messaggio.exe');
+      drawFrozenWindowGhost(W - 160, 10, 150, 60, 'orario_sistema');
+    }
+
+    // --- barre colore stile test-pattern TV, fuse organicamente sopra lo sfondo
+    // (blend + alpha ridotta) con un lieve jitter geometrico guidato da un'onda
+    // continua nel tempo — mai a scatti casuali, resta sotto la soglia fotosensibile ---
+    const SMPTE_COLORS = ['#FFFFFF', '#FFFF00', '#00FFFF', '#00FF00', '#FF00FF', '#FF0000', '#0000FF'];
+    function drawCrtWash(now){
+      const t = now / 1000;
+      const barW = W / SMPTE_COLORS.length;
+      const rows = 40;
+      const rowH = H / rows;
+      ctx.save();
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.globalAlpha = 0.62;
+      for (let r = 0; r < rows; r++){
+        const y = r * rowH;
+        const wobble = Math.sin(r * 0.35 + t * 1.4) * 3;
+        SMPTE_COLORS.forEach((color, i) => {
+          ctx.fillStyle = color;
+          ctx.fillRect(i * barW + wobble, y, barW + 1, rowH + 0.6);
+        });
+      }
+      ctx.restore();
+    }
+
+    // --- scanline scure, fitte e spezzate, tipiche di un segnale CRT degradato ---
+    function drawCrtScanlines(){
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      for (let y = 0; y < H; y += 3){
+        let x = 0;
+        while (x < W){
+          const segW = 30 + Math.random() * 70;
+          if (Math.random() < 0.82) ctx.fillRect(x, y, segW, 1.4);
+          x += segW + Math.random() * 14;
+        }
+      }
+      ctx.restore();
+    }
+
+    // --- glitch denso e persistente: un nuovo target per banda ogni stepMs, ma il
+    // colore ci arriva interpolando (mai a scatto), più un lieve moto sinusoidale
+    // continuo sfasato per banda così non si ferma mai del tutto tra un target e l'altro ---
+    function randomGlitchBandState(){
+      return {
+        offset: (Math.random() - 0.5) * 90,
+        hue: Math.random() * 360,
+        alpha: 0.16 + Math.random() * 0.14
+      };
+    }
+    function hueLerp(a, b, t){
+      const diff = ((b - a + 540) % 360) - 180; // percorso più breve sul cerchio 0-360
+      return (a + diff * t + 360) % 360;
+    }
+    let glitchBands = null;
+    let glitchChangeAt = 0;
+    function drawDenseGlitchBurst(now, stepMs){
+      const bandCount = 34;
+      if (!glitchBands){
+        glitchBands = Array.from({ length: bandCount }, () => ({
+          from: randomGlitchBandState(), to: randomGlitchBandState()
+        }));
+        glitchChangeAt = now;
+      }
+      const progress = Math.min(1, (now - glitchChangeAt) / stepMs);
+      const bandH = H / bandCount;
+      const t = now / 1000;
+      ctx.save();
+      glitchBands.forEach((b, i) => {
+        const y = i * bandH;
+        const offset = b.from.offset + (b.to.offset - b.from.offset) * progress;
+        const alpha = b.from.alpha + (b.to.alpha - b.from.alpha) * progress;
+        const hue = hueLerp(b.from.hue, b.to.hue, progress);
+
+        const wobbleOffset = Math.sin(t * 1.6 + i * 0.8) * 4;
+        const wobbleHue = Math.sin(t * 1.1 + i * 1.3) * 6;
+
+        ctx.fillStyle = `hsla(${(hue + wobbleHue + 360) % 360},90%,60%,${Math.max(0, alpha)})`;
+        ctx.fillRect(offset + wobbleOffset, y, W, bandH * 0.8);
+      });
+      ctx.restore();
+
+      if (progress >= 1){
+        glitchBands.forEach(b => { b.from = b.to; b.to = randomGlitchBandState(); });
+        glitchChangeAt = now;
+      }
+    }
+
+    // --- figure di persone in codice binario ---
+    function humanoidPath(cx, cy, scale){
+      const p = new Path2D();
+      p.ellipse(cx, cy - 46*scale, 14*scale, 16*scale, 0, 0, Math.PI*2);
+      p.moveTo(cx - 20*scale, cy - 26*scale);
+      p.quadraticCurveTo(cx, cy - 40*scale, cx + 20*scale, cy - 26*scale);
+      p.lineTo(cx + 26*scale, cy + 50*scale);
+      p.quadraticCurveTo(cx, cy + 60*scale, cx - 26*scale, cy + 50*scale);
+      p.closePath();
+      return p;
+    }
+    const GLITCH_GLYPHS = '01/\\|†‡§¤%$#&@*+='.split('');
+    function drawBinaryFigure(cx, cy, scale, alpha){
+      ctx.save();
+      ctx.clip(humanoidPath(cx, cy, scale));
+      ctx.font = `${7*scale}px 'VT323', monospace`;
+      const boxX = cx - 40*scale, boxY = cy - 70*scale, boxW = 80*scale, boxH = 140*scale;
+      for (let y = boxY; y < boxY + boxH; y += 7.5*scale){
+        let x = boxX;
+        while (x < boxX + boxW){
+          const glyph = Math.random() < 0.85
+            ? (Math.random() < 0.5 ? '0' : '1')
+            : GLITCH_GLYPHS[Math.floor(Math.random() * GLITCH_GLYPHS.length)];
+          const charAlpha = alpha * (0.35 + Math.random() * 0.65);
+          ctx.fillStyle = `rgba(255,255,255,${charAlpha})`;
+          ctx.fillText(glyph, x, y);
+          x += 5.5*scale;
+        }
+      }
+      ctx.restore();
+    }
+
+    function clear(){ ctx.clearRect(0, 0, W, H); }
+
+    resize();
+    return {
+      drawGrain, paintGrain, drawGlitchBurst, drawChromaticScanlines, drawBinaryFigure,
+      drawFrozenDesktop, drawCrtWash, drawCrtScanlines, drawDenseGlitchBurst,
+      clear, resize
+    };
+  })();
+
+  // letto dalla CSS invece di ripetere l'esadecimale: --pantone-485 resta l'unica fonte
+  // del colore, anche per i disegni a canvas (lancetta dei secondi e perno dell'orologio
+  // di Fase 3) che non possono referenziare direttamente una custom property CSS
+  const PANTONE_485 = getComputedStyle(document.documentElement).getPropertyValue('--pantone-485').trim() || '#DA291C';
+  const PHOSPHOR = getComputedStyle(document.documentElement).getPropertyValue('--phosphor').trim() || '#39FF14';
+
+  // ============================================================
+  // STATO E TIMING
+  // ============================================================
+  const state = {
+    phase: 0, started: false, intervals: {}, timeouts: {},
+    notifMode: 'stacked', stackedCount: 0, chaosZ: 20, lastChaosPos: null,
+    dialogShown: false, dialogAttempted: false, chaosInterval: 0, rebootDialogShown: false,
+    escapeCycleInterval: null,
+    fx: { glitchActive:false, glitchStart:0, figureFlashes:[], trapped:{ active:false, start:0 } },
+    p2: { answered:false, dissolving:false, videoActive:false, videoEl:null, ghost:{ x:0, y:0, targetX:0, targetY:0 } },
+    p3: { clockActive:false, clock:{ x:0, y:0, vx:0, vy:0, r:60, lastT:0 } }
+  };
+
+  const STACKED_SPAWN_INTERVAL_MS = 900;
+  // ritardo prima della PRIMA notifica stacked (non gli spawn successivi, cadenzati da
+  // STACKED_SPAWN_INTERVAL_MS)
+  const STACKED_SPAWN_INITIAL_DELAY_MS = 2500;
+  const DISMISS_DIALOG_DELAY_MS = 12000;
+  const STACK_VISIBLE_MAX = 8;
+  const CHAOS_SPAWN_INTERVAL_START_MS = 700;
+  const CHAOS_SPAWN_INTERVAL_MIN_MS = 220;
+  const CHAOS_ACCEL_STEP_MS = 35;
+  const UTILITY_WINDOWS_DELAY_MS = 8000;
+  const MELT_DELAY_AFTER_UTILITY_MS = 10000;
+
+  const TRAPPED_GLITCH_DURATION_MS = 6600;
+  const TRAPPED_GLITCH_STEP_MS = 350;
+  const TRAPPED_MESSAGE_HOLD_MS = 1400;
+  const TRAPPED_MESSAGE_FADE_MS = 200;
+  const TRAPPED_MESSAGE_GAP_MS = 300;
+  const ESCAPE_CYCLE_INTERVAL_MS = 475;
+
+  const P2_STILL_HERE_MIN_MS = 8000;
+  const P2_STILL_HERE_MAX_MS = 10000;
+  const P2_STILL_HERE_VISIBLE_MIN_MS = 2000;
+  const P2_STILL_HERE_VISIBLE_MAX_MS = 3000;
+  const P2_SETTLE_MS = 2000;
+  const P2_STABILIZE_MS = 500;
+  const P2_DISSOLVE_MS = 900;
+  const P2_EXIT_IDLE_MS = 60000;
+  const P2_BSOD_EMPTY_PAUSE_MS = 1000;
+  const P2_EXIT_SCREEN_HOLD_MS = 500;
+
+  const P3_LINE_TEXT = 'Vai alla pagina 19 del manuale.';
+  const P3_LINE_GAP_START_MS = 260;
+  const P3_LINE_GAP_MIN_MS = 20;
+  const P3_CHAR_DELAY_START_MS = 26; // ritmo medio di typeLine() (18-34ms/carattere)
+  const P3_CHAR_DELAY_MIN_MS = 3;
+  const P3_CRT_HOLD_MS = 30; // pausa minima tra i due stadi del collasso, per far percepire il primo scatto prima del secondo
+
+  // le 8 righe del log BSOD di Fase 2, digitate una alla volta da runP2BsodLog()
+  const P2_BSOD_LINES = [
+    'ATTENZIONE: soglia di attenzione superata',
+    'processo produttività.exe terminato inaspettatamente',
+    'tempo trascorso: irrecuperabile',
+    'memoria satura di notifiche non lette',
+    'connessione con te stesso: persa',
+    'tentativo di riconnessione... fallito',
+    'stai ancora guardando',
+    'nessun aggiornamento disponibile per questa versione di te'
+  ];
+
+  // ============================================================
+  // AUDIO
+  // ============================================================
+  // comparsa di una notifica (spawnNotification, sia stacked che chaotic): nuova
+  // istanza Audio ad ogni chiamata, stesso modello di playButtonSfx, così notifiche
+  // ravvicinate (fino a CHAOS_SPAWN_INTERVAL_MIN_MS in modalità chaotic) si sovrappongono
+  // invece di tagliarsi il suono a vicenda
+  function playNotifBlip(){
+    new Audio('suono_notifiche.mp3').play().catch(() => {});
+  }
+
+  // ------------------------------------------------------------
+  // 6 cue a eventi su un solo <audio> condiviso (#p2AmbientAudio): ogni nuovo cue
+  // interrompe di colpo quello in corso e fa partire il file nuovo da zero — nessun
+  // crossfade, nessuna gestione di volume, coerente con l'estetica "a scatti" del sito
+  // ------------------------------------------------------------
+  function playCue(src, { loop = false } = {}){
+    const audio = document.getElementById('p2AmbientAudio');
+    audio.pause();
+    audio.loop = loop;
+    audio.src = src;
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  }
+
+  // feedback di pressione tasto in Fase 1 (vedi listener keydown globale più sotto):
+  // una nuova istanza Audio ad ogni chiamata, mai #p2AmbientAudio, così pressioni
+  // ravvicinate non si tagliano il suono a vicenda e non interrompono/riavviano per
+  // errore il cue ambientale in corso su quel player condiviso
+  function playButtonSfx(){
+    new Audio('pulsante.mp3').play().catch(() => {});
+  }
+
+  // ============================================================
+  // NOTIFICHE
+  // ============================================================
+  const NOTIF_TEMPLATES = [
+    { type:'error', title:'Errore', body:'Impossibile trovare la tua attenzione.', button:'Riprova' },
+    { type:'warning', title:'Avviso di sistema', body:'Stai scorrendo da 47 minuti.', button:'Ignora' },
+    { type:'error', title:'Errore 404', body:'Pace interiore non trovata.', button:'OK' },
+    { type:'system', title:'Conferma', body:'Vuoi davvero smettere di guardare?', button:'No' },
+    { type:'warning', title:'Avviso', body:'La notifica precedente non è stata letta.', button:'Va bene' },
+    { type:'error', title:'Errore critico', body:'Il tempo libero ha smesso di rispondere.', button:'Chiudi' },
+    { type:'system', title:'Sistema', body:'Aggiornamento della tua identità in corso...', button:'Attendi' },
+    { type:'warning', title:'Avviso', body:'Non ci sono più cose nuove da vedere qui.', button:'Continua comunque' }
+  ];
+  function notifIconMarkup(type){
+    if (type === 'error') return `<span class="notifIconGlyph">&times;</span>`;
+    if (type === 'warning') return `<div class="notifIconTriangle"></div><span class="notifIconGlyph">!</span>`;
+    return `<div class="notifIconDoc"></div>`;
+  }
+  function spawnNotification(){
+    const layer = document.getElementById('notifLayer');
+    const t = NOTIF_TEMPLATES[Math.floor(Math.random() * NOTIF_TEMPLATES.length)];
+    const toast = document.createElement('div');
+    toast.className = 'notifToast';
+    toast.innerHTML = `
+      <div class="notifTitlebar"><span>${t.title}</span></div>
+      <div class="notifBody">
+        <div class="notifIcon notifIcon-${t.type}">${notifIconMarkup(t.type)}</div>
+        <div class="notifText">${t.body}</div>
+      </div>
+      <div class="notifButtonRow"><button class="notifButton" tabindex="-1">${t.button}</button></div>
+    `;
+    if (state.notifMode === 'stacked') {
+      const stackIndex = state.stackedCount % STACK_VISIBLE_MAX;
+      toast.style.right = '10px';
+      toast.style.bottom = (10 + stackIndex * 92) + 'px';
+    } else {
+      // z-index via via crescente e un piccolo offset rispetto alla precedente,
+      // così le notifiche si accumulano parzialmente invece di restare sempre separate
+      state.chaosZ++;
+      toast.style.zIndex = state.chaosZ;
+      let top, left;
+      if (state.lastChaosPos && Math.random() < 0.65) {
+        top = Math.max(0, Math.min(78, state.lastChaosPos.top + (Math.random() * 12 - 3)));
+        left = Math.max(0, Math.min(72, state.lastChaosPos.left + (Math.random() * 12 - 3)));
+      } else {
+        top = Math.random() * 78;
+        left = Math.random() * 72;
+      }
+      toast.style.top = top + '%';
+      toast.style.left = left + '%';
+      toast.style.transform = `rotate(${(Math.random()*10-5)}deg)`;
+      state.lastChaosPos = { top, left };
+    }
+    layer.appendChild(toast);
+    setTimeout(() => toast.remove(), 3200);
+    state.stackedCount++;
+    playNotifBlip();
+  }
+  function scheduleNextNotification(delay){
+    state.timeouts.notif = setTimeout(() => {
+      spawnNotification();
+      let nextDelay;
+      if (state.notifMode === 'stacked') {
+        nextDelay = STACKED_SPAWN_INTERVAL_MS;
+      } else {
+        state.chaosInterval = Math.max(CHAOS_SPAWN_INTERVAL_MIN_MS, state.chaosInterval - CHAOS_ACCEL_STEP_MS);
+        nextDelay = state.chaosInterval;
+      }
+      scheduleNextNotification(nextDelay);
+    }, delay);
+  }
+
+  // ============================================================
+  // FINESTRE DI SISTEMA (tardive, compaiono dopo il crack)
+  // ============================================================
+  function startLoadingLoop(){
+    const fill = document.getElementById('loadingBarFill');
+    let pct = 0;
+    state.intervals.loading = setInterval(() => {
+      pct += 3; if (pct >= 90) pct = 0;
+      fill.style.width = pct + '%';
+    }, 140);
+  }
+  function startClockLoop(){
+    let fakeMs = Date.now();
+    const display = document.getElementById('clockDisplay');
+    const taskbarClock = document.getElementById('taskbarClock');
+    state.intervals.clock = setInterval(() => {
+      fakeMs += 1000;
+      const d = new Date(fakeMs);
+      const text = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+      display.textContent = text;
+      if (taskbarClock) taskbarClock.textContent = text;
+    }, 700);
+  }
+  function startFocusSteal(){
+    const win = document.getElementById('focusWindow');
+    state.intervals.focusSteal = setInterval(() => win.classList.add('stealFocus'), 5200);
+  }
+  function showUtilityWindows(){
+    document.getElementById('loadingWindow').classList.add('visible');
+    document.getElementById('focusWindow').classList.add('visible');
+    document.getElementById('clockWindow').classList.add('visible');
+    startLoadingLoop(); startClockLoop(); startFocusSteal();
+    state.timeouts.melt = setTimeout(startMelt, MELT_DELAY_AFTER_UTILITY_MS);
+  }
+
+  // ============================================================
+  // DIALOGO E CRACK
+  // ============================================================
+  function showDismissDialog(){
+    if (state.phase !== 1) return;
+    state.dialogShown = true;
+    document.getElementById('dismissDialog').classList.add('visible');
+  }
+
+  function runBinaryFigureFlicker(){
+    // 5 lampeggi distanziati (~420ms l'uno dall'altro) — ben sotto la soglia
+    // di sicurezza fotosensibile (WCAG 2.3.1: max 3 flash/sec su area ampia)
+    for (let i = 0; i < 5; i++){
+      const start = performance.now() + i * 420 + Math.random() * 120;
+      state.fx.figureFlashes.push({
+        start,
+        x: Math.random() * 0.7 * innerWidth + 40,
+        y: Math.random() * 0.5 * innerHeight + 60,
+        scale: 1 + Math.random() * 0.6
+      });
+    }
+  }
+
+  // Finestra "Escape": alterna ESCAPE / "Hai N notifiche" (N iperbolico, scollegato dal
+  // conteggio reale). L'intervallo NON vive in state.intervals apposta: startMelt() pulisce
+  // quell'oggetto in blocco, ma questa finestra deve restare accesa (e continuare ad
+  // alternarsi) per tutta la fase caotica, fino all'avvio del terminale — non solo fino al melt
+  function startEscapeCycle(){
+    const el = document.getElementById('escapeWindow');
+    const body = document.getElementById('escapeBody');
+    el.classList.remove('dissolving');
+    el.classList.add('visible');
+    body.textContent = 'ESCAPE';
+    body.classList.remove('counting');
+
+    let showingCount = false;
+    let escapeCount = 4;
+    state.escapeCycleInterval = setInterval(() => {
+      body.classList.add('flash');
+      setTimeout(() => body.classList.remove('flash'), 150);
+
+      showingCount = !showingCount;
+      if (showingCount) {
+        escapeCount = Math.round(escapeCount * 1.55 + 3);
+        body.textContent = `Hai ${escapeCount} notifiche`;
+        body.classList.add('counting');
+      } else {
+        body.textContent = 'ESCAPE';
+        body.classList.remove('counting');
+      }
+    }, ESCAPE_CYCLE_INTERVAL_MS);
+  }
+  function stopEscapeCycle(){
+    clearInterval(state.escapeCycleInterval);
+    const el = document.getElementById('escapeWindow');
+    el.classList.remove('visible');
+    el.classList.add('dissolving');
+  }
+
+  function handleDismissAttempt(){
+    state.dialogAttempted = true;
+    document.getElementById('dismissDialog').classList.remove('visible');
+
+    // AUDIO_2 (one-shot): sostituisce AUDIO_1 esattamente qui, nel keydown con cui
+    // l'utente crede di togliere le notifiche e scatena invece l'effetto contrario
+    playCue('AUDIO_2.mp3');
+
+    startEscapeCycle();
+
+    const p1 = document.getElementById('phase1');
+    p1.classList.add('glitching');
+    setTimeout(() => p1.classList.remove('glitching'), 500);
+
+    state.fx.glitchActive = true;
+    state.fx.glitchStart = performance.now();
+    setTimeout(() => { state.fx.glitchActive = false; }, 900);
+
+    runBinaryFigureFlicker();
+
+    state.notifMode = 'chaotic';
+    state.chaosInterval = CHAOS_SPAWN_INTERVAL_START_MS;
+
+    // lampeggi stroboscopici di figure binarie ripetuti per tutta la fase caotica
+    state.intervals.figureStrobe = setInterval(() => {
+      if (state.notifMode === 'chaotic') runBinaryFigureFlicker();
+    }, 1700 + Math.random() * 700);
+
+    state.timeouts.utilityWindows = setTimeout(showUtilityWindows, UTILITY_WINDOWS_DELAY_MS);
+  }
+
+  // ============================================================
+  // SCIOGLIMENTO E DISSOLVENZA VERSO LA FASE 2
+  // ============================================================
+  function startMelt(){
+    // ferma la catena automatica di notifiche...
+    clearTimeout(state.timeouts.notif);
+    // ...e impedisce che un'ulteriore pressione di tasto ne generi ancora una: da qui
+    // in poi notifMode non è più 'chaotic', quindi il ramo "else if (state.notifMode
+    // === 'chaotic') spawnNotification()" nel keydown globale non scatta più. Copre
+    // l'intero tratto critico (utility windows, melt, terminale, schermo intrappolato)
+    // tagliando il problema alla radice invece di rincorrerlo fase per fase
+    state.notifMode = 'stopped';
+
+    Object.values(state.intervals).forEach(clearInterval);
+    document.querySelectorAll('#phase1 .lateWindow.visible').forEach((w, i) => {
+      setTimeout(() => w.classList.add('melting'), i * 180);
+    });
+    state.timeouts.terminal = setTimeout(runBootTerminal, 3800);
+  }
+
+  // ============================================================
+  // TERMINALE DI BOOT — digitazione a caratteri, poi transizione alla Fase 2
+  // ============================================================
+  const BOOT_LINES = [
+    '> ripristino connessione...',
+    '> analisi anomalie: 47 rilevate',
+    '> tentativo di richiusura: fallito',
+    '> reindirizzamento del flusso dati',
+    '> accesso a: soglia_liminale.sys',
+    '> caricamento fase_02 in corso'
+  ];
+  function typeLine(el, text, onDone){
+    let i = 0;
+    (function step(){
+      if (i <= text.length){
+        el.textContent = text.slice(0, i);
+        i++;
+        setTimeout(step, 18 + Math.random() * 34);
+      } else {
+        onDone();
+      }
+    })();
+  }
+  function runBootTerminal(){
+    // AUDIO_3 (one-shot): sostituisce AUDIO_2 qui, alla comparsa della prima schermata
+    // del terminale digitato
+    playCue('AUDIO_3.mp3');
+
+    const overlay = document.getElementById('terminalOverlay');
+    const body = document.getElementById('terminalBody');
+    body.textContent = '';
+    overlay.classList.add('visible');
+    stopEscapeCycle();
+
+    let idx = 0;
+    function nextLine(){
+      if (idx >= BOOT_LINES.length){
+        state.timeouts.terminalDone = setTimeout(() => {
+          // l'overlay sfuma (0.5s via CSS) mentre il quadro intrappolato prende
+          // già vita sul canvas sottostante: una dissolvenza incrociata, non un taglio
+          overlay.classList.remove('visible');
+          runTrappedGlitch();
+        }, 900);
+        return;
+      }
+      const lineEl = document.createElement('div');
+      body.appendChild(lineEl);
+      typeLine(lineEl, BOOT_LINES[idx], () => {
+        idx++;
+        state.timeouts.terminalLine = setTimeout(nextLine, 220 + Math.random() * 260);
+      });
+    }
+    nextLine();
+  }
+
+  // ============================================================
+  // SCHERMO INTRAPPOLATO — ultimo sussulto prima della Fase 2: il terminale
+  // sfuma rivelando il desktop congelato (ricostruito sul canvas), sopra cui
+  // si fondono barre colore, glitch denso, scanline CRT e la mano che si protende
+  // ============================================================
+  const TRAPPED_MESSAGE_IDS = ['trappedMsg0', 'trappedMsg1', 'trappedMsg2'];
+
+  function scheduleTrappedMessages(){
+    let t = 200;
+    TRAPPED_MESSAGE_IDS.forEach((id, i) => {
+      const el = document.getElementById(id);
+      state.timeouts['trappedMsgIn' + i] = setTimeout(() => {
+        el.classList.add('visible');
+      }, t);
+      const hideAt = t + TRAPPED_MESSAGE_FADE_MS + TRAPPED_MESSAGE_HOLD_MS;
+      state.timeouts['trappedMsgOut' + i] = setTimeout(() => {
+        el.classList.remove('visible');
+      }, hideAt);
+      t = hideAt + TRAPPED_MESSAGE_FADE_MS + TRAPPED_MESSAGE_GAP_MS;
+    });
+  }
+
+  function runTrappedGlitch(){
+    // AUDIO_4 (loop): sostituisce AUDIO_3 qui, insieme ai tre messaggi "AIUTO"/"PER
+    // FAVORE"/"SONO INTRAPPOLATO" — resta in loop per tutta la fase intrappolata,
+    // anche dopo che i messaggi sono scomparsi e durante il dialogo di riavvio, finché
+    // non lo sostituisce AUDIO_5 nel ramo state.rebootDialogShown del keydown globale
+    playCue('AUDIO_4.mp3', { loop: true });
+
+    state.fx.trapped.active = true;
+    state.fx.trapped.start = performance.now();
+
+    // ferma la catena di notifiche chaotic: da qui in poi sono comunque coperte dal
+    // canvas degli effetti, ma senza questa riga continuerebbero a generarsi (e a
+    // suonare un vero file audio) ogni 220ms per tutto lo schermo intrappolato e
+    // per l'attesa, indefinita, del dialogo di riavvio
+    clearTimeout(state.timeouts.notif);
+
+    scheduleTrappedMessages();
+
+    state.timeouts.trappedEnd = setTimeout(() => {
+      // le barre colore/glitch/scanline restano attive (trapped.active resta true):
+      // continuano a disegnarsi dietro al dialogo finché l'utente non preme un tasto
+      TRAPPED_MESSAGE_IDS.forEach(id => document.getElementById(id).classList.remove('visible'));
+      showRebootDialog();
+    }, TRAPPED_GLITCH_DURATION_MS);
+  }
+
+  // dialogo di riavvio: attende una pressione di tasto reale prima di procedere.
+  // Nessun listener ad-hoc qui — la pressione viene gestita in modo prioritario
+  // dal listener keydown globale in fondo al file, tramite state.rebootDialogShown
+  function showRebootDialog(){
+    document.getElementById('rebootDialog').classList.add('visible');
+    state.rebootDialogShown = true;
+  }
+
+  // ============================================================
+  // FASE 2 — SOGLIA LIMINALE
+  // ============================================================
+  function paintP2Grain(){
+    const canvas = document.getElementById('p2Canvas');
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, rect.width * dpr);
+    canvas.height = Math.max(1, rect.height * dpr);
+    const pctx = canvas.getContext('2d');
+    pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    FX.paintGrain(pctx, rect.width, rect.height, 0.05);
+  }
+  window.addEventListener('resize', function(){
+    if (state.phase === 2) paintP2Grain();
+  });
+
+  function updateP2GhostTarget(){
+    const caret = document.getElementById('p2Caret');
+    if (!caret) return;
+    const r = caret.getBoundingClientRect();
+    state.p2.ghost.targetX = r.left + r.width / 2;
+    state.p2.ghost.targetY = r.top + r.height / 2;
+  }
+
+  function appendP2Char(ch){
+    const answerEl = document.getElementById('p2Answer');
+    const caret = document.getElementById('p2Caret');
+    const span = document.createElement('span');
+    span.className = 'p2-char';
+    span.textContent = (ch === ' ') ? ' ' : ch;
+    answerEl.insertBefore(span, caret);
+    // piena saturazione alla comparsa, poi desaturazione verso grayscale nel frame successivo
+    requestAnimationFrame(() => requestAnimationFrame(() => span.classList.add('faded')));
+    updateP2GhostTarget();
+  }
+  function removeLastP2Char(){
+    const answerEl = document.getElementById('p2Answer');
+    const chars = answerEl.querySelectorAll('.p2-char');
+    if (chars.length) chars[chars.length - 1].remove();
+    updateP2GhostTarget();
+  }
+
+  function resetP2SettleTimer(){
+    clearTimeout(state.timeouts.p2Settle);
+    const hasChars = document.getElementById('p2Answer').querySelectorAll('.p2-char').length > 0;
+    if (!hasChars) return;
+    state.timeouts.p2Settle = setTimeout(stabilizeThenDissolve, P2_SETTLE_MS);
+  }
+
+  function stabilizeThenDissolve(){
+    if (state.p2.dissolving || state.p2.answered) return;
+    const answerEl = document.getElementById('p2Answer');
+    const chars = answerEl.querySelectorAll('.p2-char');
+    if (chars.length === 0) return;
+    state.p2.dissolving = true;
+
+    // i caratteri tornano brevemente tutti nitidi, poi si dissolve per sempre
+    chars.forEach(c => c.classList.remove('faded'));
+
+    state.timeouts.p2Stabilize = setTimeout(() => {
+      answerEl.classList.add('dissolving');
+      state.timeouts.p2Wipe = setTimeout(() => {
+        // rimosso dal DOM e da qualunque riferimento: nessuna variabile persistente,
+        // nessun log, nessun localStorage per questo contenuto
+        answerEl.querySelectorAll('.p2-char').forEach(c => c.remove());
+        answerEl.classList.remove('dissolving');
+        state.p2.dissolving = false;
+        state.p2.answered = true;
+        triggerP2Echo();
+        openP2Video();
+      }, P2_DISSOLVE_MS);
+    }, P2_STABILIZE_MS);
+  }
+
+  // creato e precaricato appena parte la Fase 1 (mai prima: chi resta su Fase 0 non deve
+  // scaricare 41MB per niente) — nascosto, muto, pronto per essere spostato nella finestra
+  // di Fase 2 senza mai riavviare il download
+  function preloadP2Video(){
+    const v = document.createElement('video');
+    v.id = 'p2VideoPreload';
+    v.src = 'media/Sequenza-01.mp4';
+    v.preload = 'auto';
+    v.muted = true;
+    v.playsInline = true;
+    v.style.display = 'none';
+    document.body.appendChild(v);
+    state.p2.videoEl = v;
+  }
+
+  // apre la finestra video nello stesso istante in cui la risposta è del tutto sparita
+  // (chiamata da stabilizeThenDissolve) o allo scadere del timer "resisti per uscire"
+  // (resetP2ExitTimer) — qui parte anche AUDIO_6, il cue del video, vedi più sotto
+  function openP2Video(){
+    state.p2.videoActive = true;
+    // durante il video (e la schermata EXIT che segue) la tastiera non deve avere alcun
+    // effetto, incluso il timer "resisti per uscire": altrimenti un tasto premuto per
+    // curiosità mentre si guarda potrebbe far scattare goToPhase3 a metà video
+    clearTimeout(state.timeouts.p2Exit);
+
+    const video = state.p2.videoEl;
+    video.style.display = '';
+    document.getElementById('p2VideoBody').appendChild(video);
+    video.currentTime = 0;
+    video.addEventListener('ended', onP2VideoEnded, { once:true });
+
+    const win = document.getElementById('p2VideoWindow');
+    win.classList.add('atDoor');
+    win.classList.add('visible');
+    // come se qualcuno la tirasse fuori dalla porta e la trascinasse al centro: parte
+    // piccola sopra la porta (.atDoor), poi un frame dopo si rimuove quello stato così
+    // la transition la anima verso la posizione/dimensione finale
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        win.classList.remove('atDoor');
+      });
+    });
+    // muto quindi l'autoplay è permesso ovunque anche senza gesto utente sincrono, ma
+    // .play() viene comunque chiamato esplicitamente invece di affidarsi al solo autoplay.
+    // .catch() silenzioso: alcuni browser possono rifiutare la Promise (es. throttling del
+    // risparmio energetico su una scheda in background) senza che sia un errore reale da
+    // mostrare — non aggiunge un secondo tentativo automatico, solo evita una rejection
+    // non gestita in console
+    video.play().catch(() => {});
+
+    // AUDIO_6 (56s) dura più del video (36,7s): prosegue oltre la fine del video fino
+    // alla sua fine naturale, sopra la schermata EXIT e l'inizio di Fase 3 — nessun
+    // listener la ferma, né su 'ended' del video né sull'ingresso in Fase 3
+    playCue('AUDIO_6.mp3');
+  }
+
+  function onP2VideoEnded(){
+    document.getElementById('p2VideoWindow').classList.remove('visible');
+    document.getElementById('p2ExitScreen').classList.add('visible');
+    state.timeouts.p2ExitScreenHold = setTimeout(goToPhase3, P2_EXIT_SCREEN_HOLD_MS);
+  }
+
+  function triggerP2Echo(){
+    const echoEl = document.getElementById('p2Echo');
+    echoEl.style.left = state.p2.ghost.x + 'px';
+    echoEl.style.top = state.p2.ghost.y + 'px';
+    echoEl.classList.remove('pulse');
+    void echoEl.offsetWidth; // forza il reflow per poter riavviare l'animazione
+    echoEl.classList.add('pulse');
+    // navigator.vibrate() non è supportato da Safari iOS: questo pallino Pantone 485C
+    // che pulsa brevemente ne simula visivamente la vibrazione mancante
+  }
+
+  // "il sistema che vacilla": ogni lettera della domanda con un peso Handjet diverso,
+  // mai uniforme — applicata una sola volta, quando il log di sistema si ferma
+  function applyHandjetToPrompt(){
+    const el = document.getElementById('p2Prompt');
+    const text = el.textContent;
+    el.textContent = '';
+    Array.from(text).forEach(ch => {
+      const span = document.createElement('span');
+      span.className = 'p2PromptChar';
+      // uno spazio "nudo" come unico contenuto di uno span può collassare a larghezza
+      // zero (whitespace collapsing): nbsp lo preserva sempre
+      span.textContent = ch === ' ' ? ' ' : ch;
+      span.style.fontVariationSettings = `'wght' ${Math.round(100 + Math.random() * 800)}`;
+      el.appendChild(span);
+    });
+  }
+  function revealP2Prompt(){
+    document.getElementById('p2PromptArea').classList.add('visible');
+    document.getElementById('p2GhostCursor').classList.add('visible');
+    applyHandjetToPrompt();
+    // "resisti per uscire" parte da qui, non dall'ingresso in Fase 2: i 15s di scroll
+    // del log sono più lunghi di P2_EXIT_IDLE_MS (60s) — se il timer partisse prima,
+    // chi resta inattivo vedrebbe aprirsi il video mentre il log sta ancora scorrendo,
+    // prima di aver mai visto la domanda
+    resetP2ExitTimer();
+  }
+  // digita le 8 righe del log una alla volta con lo stesso ritmo del terminale di avvio
+  // (typeLine, riusata identica) — quelle già scritte restano visibili e si accumulano come
+  // un vero terminale; il contenitore scrolla in fondo ad ogni riga nuova così le righe più
+  // vecchie escono dall'inquadratura in alto. A log finito: pausa di lettura, dissolvenza
+  // dell'intero blocco, schermo blu vuoto, poi (solo allora) la domanda
+  function runP2BsodLog(){
+    const track = document.getElementById('p2BsodTrack');
+    const log = document.getElementById('p2BsodLog');
+    track.classList.remove('clearing');
+    track.textContent = '';
+
+    let idx = 0;
+    function nextLine(){
+      if (idx >= P2_BSOD_LINES.length){
+        state.timeouts.p2BsodHold = setTimeout(clearLog, TRAPPED_MESSAGE_HOLD_MS);
+        return;
+      }
+      const lineEl = document.createElement('div');
+      lineEl.className = 'p2BsodLine' + (idx === P2_BSOD_LINES.length - 1 ? ' p2BsodLine-hint' : '');
+      lineEl.style.setProperty('--gd', idx);
+      track.appendChild(lineEl);
+      log.scrollTop = log.scrollHeight;
+      typeLine(lineEl, P2_BSOD_LINES[idx], () => {
+        idx++;
+        state.timeouts.p2BsodLine = setTimeout(nextLine, TRAPPED_MESSAGE_GAP_MS);
+      });
+    }
+    function clearLog(){
+      track.classList.add('clearing');
+      state.timeouts.p2BsodClear = setTimeout(() => {
+        track.textContent = '';
+        track.classList.remove('clearing');
+        state.timeouts.p2BsodReveal = setTimeout(revealP2Prompt, P2_BSOD_EMPTY_PAUSE_MS);
+      }, 350);
+    }
+    nextLine();
+  }
+  // avviata solo quando #phase2 diventa .active (chiamata da initPhase2, mai al semplice
+  // caricamento della pagina)
+  function initP2BsodLog(){
+    runP2BsodLog();
+  }
+
+  function showP2StillHere(){
+    if (state.phase !== 2) return;
+    const el = document.getElementById('p2StillHere');
+    el.classList.add('visible');
+    const visibleMs = P2_STILL_HERE_VISIBLE_MIN_MS + Math.random() * (P2_STILL_HERE_VISIBLE_MAX_MS - P2_STILL_HERE_VISIBLE_MIN_MS);
+    state.timeouts.p2StillHereHide = setTimeout(() => el.classList.remove('visible'), visibleMs);
+  }
+
+  // "resisti per uscire": un timer che si resetta a ogni keydown — è il silenzio,
+  // non l'azione, a far scattare l'apertura del video (che poi porta a Fase 3 da solo)
+  function resetP2ExitTimer(){
+    clearTimeout(state.timeouts.p2Exit);
+    state.timeouts.p2Exit = setTimeout(openP2Video, P2_EXIT_IDLE_MS);
+  }
+
+  function handlePhase2Keydown(e){
+    // video e schermata EXIT non reagiscono a nessun tasto, incluso il reset del timer
+    // d'uscita — vedi openP2Video()
+    if (state.p2.videoActive) return;
+    resetP2ExitTimer();
+    if (state.p2.answered || state.p2.dissolving) return;
+
+    if (e.key === 'Enter'){
+      // stesso trigger della dissolvenza automatica per pausa, solo immediato: converge
+      // sulla stessa stabilizeThenDissolve(), nessuna logica duplicata
+      const hasChars = document.getElementById('p2Answer').querySelectorAll('.p2-char').length > 0;
+      if (hasChars){
+        clearTimeout(state.timeouts.p2Settle);
+        stabilizeThenDissolve();
+      }
+    } else if (e.key === 'Backspace'){
+      removeLastP2Char();
+      resetP2SettleTimer();
+    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey){
+      appendP2Char(e.key);
+      resetP2SettleTimer();
+    }
+  }
+
+  function initPhase2(){
+    state.p2.answered = false;
+    state.p2.dissolving = false;
+    state.p2.videoActive = false;
+    document.getElementById('p2Answer').querySelectorAll('.p2-char').forEach(c => c.remove());
+    document.getElementById('p2StillHere').classList.remove('visible');
+    document.getElementById('p2Echo').classList.remove('pulse');
+
+    document.getElementById('phase2').classList.add('active');
+    // AUDIO_5 (one-shot): entra in scena qui, insieme allo sfondo "Windows senza cielo"
+    playCue('AUDIO_5.mp3');
+    paintP2Grain();
+    initP2BsodLog();
+
+    updateP2GhostTarget();
+    state.p2.ghost.x = state.p2.ghost.targetX;
+    state.p2.ghost.y = state.p2.ghost.targetY;
+
+    const stillHereDelay = P2_STILL_HERE_MIN_MS + Math.random() * (P2_STILL_HERE_MAX_MS - P2_STILL_HERE_MIN_MS);
+    state.timeouts.p2StillHere = setTimeout(showP2StillHere, stillHereDelay);
+
+    // TODO: rilevamento presenza via fotocamera — funzionalità ancora in fase di
+    // decisione, va agganciata qui una volta definita
+  }
+
+  // ============================================================
+  // CICLO DI RENDER — un solo requestAnimationFrame per la Fase 1, la Fase 2 e la Fase 3
+  // ============================================================
+  function fxFrame(){
+    if (state.phase === 1) {
+      FX.clear();
+      FX.drawGrain(0.05);
+
+      if (state.fx.glitchActive) {
+        const t = (performance.now() - state.fx.glitchStart) / 1000;
+        if (t < 0.5) FX.drawGlitchBurst(t / 0.5);
+        if (t < 0.9) FX.drawChromaticScanlines(t < 0.35 ? 1 : Math.max(0, 1 - (t - 0.35) / 0.55));
+      }
+
+      const now = performance.now();
+      state.fx.figureFlashes = state.fx.figureFlashes.filter(f => now - f.start < 550);
+      state.fx.figureFlashes.forEach(f => {
+        if (now < f.start) return;
+        const age = (now - f.start) / 550;
+        let alpha;
+        if (age < 0.3) alpha = age / 0.3;
+        else if (age < 0.55) alpha = 1 - (age - 0.3) / 0.25 * 0.85;
+        else alpha = Math.max(0, 1 - age) * 0.8;
+        FX.drawBinaryFigure(f.x, f.y, f.scale, Math.max(0, alpha) * 0.9);
+      });
+
+      if (state.fx.trapped.active) {
+        FX.drawFrozenDesktop();
+        FX.drawCrtWash(now);
+        FX.drawDenseGlitchBurst(now, TRAPPED_GLITCH_STEP_MS);
+        FX.drawCrtScanlines();
+        FX.drawGrain(0.09);
+      }
+    } else if (state.phase === 2) {
+      const g = state.p2.ghost;
+      g.x += (g.targetX - g.x) * 0.12;
+      g.y += (g.targetY - g.y) * 0.12;
+      const ghostEl = document.getElementById('p2GhostCursor');
+      if (ghostEl) ghostEl.style.transform = `translate(${g.x}px, ${g.y}px)`;
+    } else if (state.phase === 3 && state.p3.clockActive) {
+      const canvas = document.getElementById('p3ClockCanvas');
+      const ctx = canvas.getContext('2d');
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const W = canvas.width / dpr, H = canvas.height / dpr;
+      const c = state.p3.clock;
+      const now = performance.now();
+      // delta-time reale, non un passo fisso: la velocità di rimbalzo resta coerente
+      // anche a frame-rate variabile (es. durante la verifica in un browser headless)
+      const dt = c.lastT ? Math.min(48, now - c.lastT) : 16;
+      c.lastT = now;
+
+      c.x += c.vx * dt;
+      c.y += c.vy * dt;
+      if (c.x - c.r < 0){ c.x = c.r; c.vx = Math.abs(c.vx); }
+      else if (c.x + c.r > W){ c.x = W - c.r; c.vx = -Math.abs(c.vx); }
+      if (c.y - c.r < 0){ c.y = c.r; c.vy = Math.abs(c.vy); }
+      else if (c.y + c.r > H){ c.y = H - c.r; c.vy = -Math.abs(c.vy); }
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+      drawP3Clock(ctx, c.x, c.y, c.r);
+    }
+    requestAnimationFrame(fxFrame);
+  }
+  requestAnimationFrame(fxFrame);
+
+  // ============================================================
+  // TRANSIZIONI DI FASE
+  // ============================================================
+  function goToPhase1(){
+    if (state.started) return;
+    state.started = true;
+    state.phase = 1;
+    document.getElementById('phase0').classList.remove('active');
+    document.getElementById('phase1').classList.add('active');
+    FX.resize();
+    // AUDIO_1 (loop): stesso gesture che ha appena fatto scattare questo passaggio di
+    // fase, quindi già "sbloccato" rispetto alle policy di autoplay dei browser
+    // (chiamata sincrona dentro l'handler del keydown) — resta in loop per tutta la
+    // Fase 1, finché non lo sostituisce AUDIO_2 in handleDismissAttempt()
+    playCue('AUDIO_1.mp3', { loop: true });
+    scheduleNextNotification(STACKED_SPAWN_INITIAL_DELAY_MS);
+    state.timeouts.dialog = setTimeout(showDismissDialog, DISMISS_DIALOG_DELAY_MS);
+    preloadP2Video();
+  }
+
+  function goToPhase2(){
+    if (state.phase !== 1) return;
+    state.phase = 2;
+    FX.clear();
+    Object.values(state.intervals).forEach(clearInterval);
+    Object.values(state.timeouts).forEach(clearTimeout);
+    document.getElementById('phase1').classList.remove('active');
+    initPhase2();
+  }
+
+  function goToPhase3(){
+    if (state.phase !== 2) return;
+    state.phase = 3;
+    Object.values(state.intervals).forEach(clearInterval);
+    Object.values(state.timeouts).forEach(clearTimeout);
+    document.getElementById('phase2').classList.remove('active');
+    document.getElementById('phase3').classList.add('active');
+    initPhase3();
+  }
+
+  // ============================================================
+  // FASE 3 — DOPO IL VIDEO: schermo che si riempie, spegnimento CRT, orologio a riposo
+  // ============================================================
+  function initPhase3(){
+    document.getElementById('p3Bsod').style.display = '';
+    document.getElementById('p3Bsod').classList.remove('collapsingY', 'collapsingX');
+    document.getElementById('p3BsodFill').textContent = '';
+    state.p3.clockActive = false;
+    runP3BsodFill();
+  }
+
+  // stesso algoritmo di typeLine() (rivela il testo carattere per carattere via
+  // textContent.slice) ma con un ritmo per-carattere parametrizzato invece del 18-34ms
+  // casuale fisso — usata solo dalla ripetizione 2 in poi per poter accelerare, senza
+  // toccare typeLine() stessa (riusata identica altrove nel progetto)
+  function typeLineAt(el, text, charDelay, onDone){
+    let i = 0;
+    (function step(){
+      if (i <= text.length){
+        el.textContent = text.slice(0, i);
+        i++;
+        setTimeout(step, charDelay);
+      } else {
+        onDone();
+      }
+    })();
+  }
+
+  // la riga si ripete finché lo schermo non è pieno — mai a scorrimento, si accumula e
+  // resta (a differenza del log di Fase 2). La prima riga usa typeLine() al suo ritmo
+  // standard (18-34ms/carattere, "già stabilito", invariato) per coerenza stilistica con
+  // il resto del progetto; dalla ripetizione successiva sia la pausa tra una riga e
+  // l'altra SIA il ritmo di digitazione si dimezzano ogni 4 righe (entrambi con un
+  // pavimento minimo) — su uno schermo alto anche solo la pausa non basterebbe a restare
+  // in un tempo ragionevole, e l'accelerazione della digitazione stessa rende più
+  // evidente la sensazione di un sistema che va in sovraccarico e non riesce più a
+  // smettere di ripetersi
+  function runP3BsodFill(){
+    const box = document.getElementById('p3Bsod');
+    const fill = document.getElementById('p3BsodFill');
+    let count = 0;
+    let gap = P3_LINE_GAP_START_MS;
+    let charDelay = P3_CHAR_DELAY_START_MS;
+    function nextLine(){
+      // controllo PRIMA di aggiungere: se le righe già scritte riempiono già il
+      // contenitore, quella appena completata è l'ultima — fermarsi qui è responsivo
+      // alla vera altezza dello schermo, non a un numero fisso di ripetizioni
+      if (fill.scrollHeight >= box.clientHeight){
+        startP3CrtPowerOff();
+        return;
+      }
+      const lineEl = document.createElement('div');
+      lineEl.className = 'p3BsodLine';
+      fill.appendChild(lineEl);
+      const onLineDone = () => {
+        count++;
+        if (count % 4 === 0){
+          gap = Math.max(P3_LINE_GAP_MIN_MS, gap / 2);
+          charDelay = Math.max(P3_CHAR_DELAY_MIN_MS, charDelay / 2);
+        }
+        state.timeouts.p3Line = setTimeout(nextLine, gap);
+      };
+      if (count === 0){
+        typeLine(lineEl, P3_LINE_TEXT, onLineDone);
+      } else {
+        typeLineAt(lineEl, P3_LINE_TEXT, charDelay, onLineDone);
+      }
+    }
+    nextLine();
+  }
+
+  // spegnimento CRT in due stadi sequenziali (collasso verticale, poi orizzontale), poi
+  // schermo nero (il fondo di #phase3 è già --bg-black: basta nascondere .p3Bsod)
+  function startP3CrtPowerOff(){
+    // AUDIO_7 (one-shot): parte esattamente quando l'ultima riga "Vai alla pagina 19..."
+    // ha finito di scriversi e lo schermo di Fase 3 è pieno, un attimo prima che parta
+    // lo spegnimento CRT — sostituisce di colpo qualunque cue precedente ancora attivo
+    // (tipicamente la coda di AUDIO_6)
+    playCue('AUDIO_7.mp3');
+
+    const box = document.getElementById('p3Bsod');
+    box.classList.add('collapsingY');
+    box.addEventListener('animationend', function onCollapseY(){
+      box.removeEventListener('animationend', onCollapseY);
+      state.timeouts.p3CrtHold = setTimeout(() => {
+        // rimuove esplicitamente collapsingY prima di aggiungere collapsingX: pur avendo
+        // tarato lo 0% di p3CrtCollapseX per combaciare esattamente con lo stato finale
+        // di p3CrtCollapseY, non è prudente affidarsi all'ordine delle regole CSS per
+        // decidere quale animation shorthand vince quando entrambe le classi coesistono
+        box.classList.remove('collapsingY');
+        box.classList.add('collapsingX');
+        box.addEventListener('animationend', function onCollapseX(){
+          box.removeEventListener('animationend', onCollapseX);
+          box.style.display = 'none';
+          startP3Clock();
+        }, { once:true });
+      }, P3_CRT_HOLD_MS);
+    }, { once:true });
+  }
+
+  function sizeP3ClockCanvas(){
+    const canvas = document.getElementById('p3ClockCanvas');
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, rect.width * dpr);
+    canvas.height = Math.max(1, rect.height * dpr);
+  }
+  window.addEventListener('resize', function(){
+    if (state.phase === 3 && state.p3.clockActive) sizeP3ClockCanvas();
+  });
+
+  // stato di quiete: nessun timer fa avanzare oltre — resta finché non si preme un tasto
+  // (vedi il dispatcher keydown globale in fondo al file)
+  function startP3Clock(){
+    sizeP3ClockCanvas();
+    const canvas = document.getElementById('p3ClockCanvas');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = canvas.width / dpr, H = canvas.height / dpr;
+    const r = Math.max(40, Math.min(110, Math.min(W, H) * 0.09));
+    state.p3.clock = {
+      x: r + Math.random() * Math.max(1, W - 2 * r),
+      y: r + Math.random() * Math.max(1, H - 2 * r),
+      vx: (Math.random() < 0.5 ? -1 : 1) * (0.09 + Math.random() * 0.04),
+      vy: (Math.random() < 0.5 ? -1 : 1) * (0.09 + Math.random() * 0.04),
+      r, lastT: 0
+    };
+    state.p3.clockActive = true;
+  }
+
+  // orologio DIGITALE disegnato a canvas (nessun asset/font di sistema importato): ora
+  // reale del sistema, secondi dal vivo — stessa scelta già fatta per l'orologio della
+  // taskbar di Fase 1, per coerenza, invece di simulare un orario fittizio. VT323 +
+  // fosforo verde (--phosphor) invece di bianco: lo stesso trattamento del "NESSUN
+  // SEGNALE" di Fase 0 — il progetto si chiude nello stesso registro visivo con cui è
+  // iniziato, invece di introdurre un colore nuovo solo per questa schermata
+  function drawP3Clock(ctx, cx, cy, r){
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    const now = new Date();
+    const pad2 = n => String(n).padStart(2, '0');
+    const text = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
+    // r*0.4 mantiene la larghezza del testo (8 caratteri monospace) dentro il riquadro
+    // 2r×2r già usato dalla fisica di rimbalzo, senza doverla toccare
+    const fontSize = Math.max(16, r * 0.4);
+    ctx.font = `${fontSize}px 'VT323', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = PHOSPHOR;
+    ctx.shadowColor = PHOSPHOR;
+    ctx.shadowBlur = fontSize * 0.4;
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
+
+  // ============================================================
+  // INPUT — SOLO tastiera reale
+  // ============================================================
+  window.addEventListener('keydown', function(e){
+    if (state.phase === 0) {
+      goToPhase1();
+    } else if (state.phase === 1) {
+      // feedback di pressione: suona per ogni tasto da qui fino a poco prima dello
+      // schermo intrappolato (runTrappedGlitch, che porta state.fx.trapped.active a
+      // true), indipendentemente da qualunque altro effetto che il tasto scateni sotto
+      if (!state.fx.trapped.active) playButtonSfx();
+      if (state.rebootDialogShown) {
+        // priorità assoluta: solo questo, nient'altro della Fase 1 nello stesso keydown
+        state.rebootDialogShown = false;
+        document.getElementById('rebootDialog').classList.remove('visible');
+        state.fx.trapped.active = false;
+        goToPhase2();
+      } else if (state.dialogShown && !state.dialogAttempted) {
+        handleDismissAttempt();
+      } else if (state.notifMode === 'chaotic' && !state.fx.trapped.active) {
+        spawnNotification();
+      }
+    } else if (state.phase === 2) {
+      handlePhase2Keydown(e);
+    } else if (state.phase === 3) {
+      // attivo SOLO nello stato "orologio": il riempimento BSOD e lo spegnimento CRT
+      // restano transizioni automatiche, non interrompibili da tastiera
+      if (state.p3.clockActive) {
+        // reload reale, non un ritorno simulato a Fase 0: coerente col contatore di
+        // sessione onesto (mai resettato) — un reload conta come una nuova visita vera,
+        // ed evita di dover ripulire a mano decine di timer/interval sparsi nelle fasi.
+        // sessionStorage (non localStorage: vale solo per il prossimo caricamento) dice
+        // al prossimo avvio dello script di saltare la schermata "nessun segnale" e
+        // partire già da Fase 1, come se il tasto di attivazione fosse già stato premuto
+        sessionStorage.setItem('res_skip_intro', '1');
+        location.reload();
+      }
+    }
+  }, { passive: true });
+
+  // Il tocco non fa nulla, di proposito — nessun listener collegato.
+
+  // riavvio dallo stato orologio (vedi sopra): salta "nessun segnale" e riparte già da
+  // Fase 1, come se il tasto di attivazione fosse già stato premuto. Rimosso subito dopo
+  // averlo letto, così non influenza un futuro caricamento genuino della pagina (che deve
+  // sempre iniziare da Fase 0, come una prima visita reale)
+  if (sessionStorage.getItem('res_skip_intro')){
+    sessionStorage.removeItem('res_skip_intro');
+    goToPhase1();
+  }
+
+})();
+</script>
+
+</body>
+</html>
