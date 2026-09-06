@@ -68,6 +68,13 @@
     background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 3px);
     mix-blend-mode: overlay;
   }
+  /* #phase0 non torna mai visibile dopo goToPhase1 (solo un reload la rimostra da capo),
+     ma senza questo la sua animation infinite e il mix-blend-mode continuerebbero a
+     essere ricalcolati per tutta Fase 1/2/3 — lavoro sprecato che si somma proprio al
+     carico della fase caotica. Pura ottimizzazione d'esecuzione: da inattiva è già
+     invisibile (opacity:0 via .phase), quindi non c'è alcuna differenza percepibile */
+  #phase0:not(.active) .noSignal{ animation-play-state: paused; }
+  #phase0:not(.active)::before{ mix-blend-mode: normal; }
   @keyframes blinkSignal{ 0%,49%{ opacity:1; } 50%,100%{ opacity:0; } }
 
   #debugCounter{
@@ -244,6 +251,12 @@
     box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #FFFFFF, inset -2px -2px 0 #808080, inset 2px 2px 0 #DFDFDF;
     font-family: Arial, Helvetica, sans-serif; z-index:20;
     animation: toastIn 0.3s ease-out; pointer-events:none;
+    /* toastIn anima solo transform/opacity (già così): will-change promuove ogni toast
+       sul proprio layer compositore fin dalla creazione, invece che sincronamente al primo
+       frame dell'animazione — è l'animazione che si ripete più spesso durante il caos
+       (una ogni CHAOS_SPAWN_INTERVAL_MIN_MS nel peggiore dei casi), quindi il punto dove
+       questo aiuta di più */
+    will-change: transform, opacity;
   }
   @keyframes toastIn{ from{ transform: translateY(14px); opacity:0; } to{ transform: translateY(0); opacity:1; } }
 
@@ -311,7 +324,11 @@
     72%{ transform: translate(-3px,1px); filter:none; }
     100%{ transform: translate(0,0); filter:none; }
   }
-  #phase1.glitching{ animation: glitchAnim 0.7s steps(2, jump-none); }
+  /* will-change qui, non su #phase1 in generale: promuove il layer solo per il brevissimo
+     (700ms, un'unica volta all'avvio del caos) burst di glitch, evitando lo scatto della
+     promozione sincrona a inizio animazione, senza tenere #phase1 (grande, con sfondo e
+     tutte le finestre) su un layer separato per l'intera restante durata della fase */
+  #phase1.glitching{ animation: glitchAnim 0.7s steps(2, jump-none); will-change: transform, filter; }
   #phase1.glitching::after{
     content:""; position:absolute; inset:0; pointer-events:none;
     background: rgba(255,255,255,0.5); animation: glitchFlash 0.15s ease-out; z-index:100;
@@ -341,16 +358,24 @@
   .tm-please{ top:50%; left:6%; transform:translateY(-50%); text-align:left; }
   .tm-trapped{ bottom:14%; right:8%; text-align:right; }
 
+  /* raggi di blur ridotti rispetto all'originale (0.4/0.9/1.6/2.4/3.5 → 0.4/0.6/1/1.4/2):
+     fino a 3 finestre animano questo filter in parallelo, sfalsate di soli 180ms — un blur
+     ampio moltiplicato per più layer è il costo più pesante di questa transizione su iPad.
+     Percepibilmente quasi identico: negli step finali l'opacity scende già verso 0
+     (0.75 poi 0.35), quindi il contributo visivo del blur esatto conta sempre meno */
   @keyframes meltDown{
     0%{ transform: scaleY(1) skewX(0deg) translateY(0); border-radius:0; opacity:1; filter:none; }
     12%{ transform: scaleY(1.05) skewX(-2deg) translateY(3px); filter: saturate(1.2); }
     28%{ transform: scaleY(1.3) skewX(3deg) translateY(18px); border-radius: 0 0 25% 25% / 0 0 45% 45%; filter: blur(0.4px) saturate(1.4) hue-rotate(8deg); }
-    46%{ transform: scaleY(1.75) skewX(-4deg) translateY(55px); border-radius: 0 0 40% 40% / 0 0 70% 70%; filter: blur(0.9px) saturate(1.6) hue-rotate(-6deg); }
-    64%{ transform: scaleY(2.4) skewX(5deg) translateY(115px); border-radius: 0 0 48% 48% / 0 0 85% 85%; opacity:0.75; filter: blur(1.6px) saturate(1.8) hue-rotate(14deg); }
-    82%{ transform: scaleY(3.1) skewX(-3deg) translateY(190px); border-radius: 0 0 50% 50% / 0 0 94% 94%; opacity:0.35; filter: blur(2.4px) saturate(2) hue-rotate(-10deg); }
-    100%{ transform: scaleY(4) skewX(2deg) translateY(280px); border-radius: 0 0 50% 50% / 0 0 98% 98%; opacity:0; filter: blur(3.5px) saturate(0.6); }
+    46%{ transform: scaleY(1.75) skewX(-4deg) translateY(55px); border-radius: 0 0 40% 40% / 0 0 70% 70%; filter: blur(0.6px) saturate(1.6) hue-rotate(-6deg); }
+    64%{ transform: scaleY(2.4) skewX(5deg) translateY(115px); border-radius: 0 0 48% 48% / 0 0 85% 85%; opacity:0.75; filter: blur(1px) saturate(1.8) hue-rotate(14deg); }
+    82%{ transform: scaleY(3.1) skewX(-3deg) translateY(190px); border-radius: 0 0 50% 50% / 0 0 94% 94%; opacity:0.35; filter: blur(1.4px) saturate(2) hue-rotate(-10deg); }
+    100%{ transform: scaleY(4) skewX(2deg) translateY(280px); border-radius: 0 0 50% 50% / 0 0 98% 98%; opacity:0; filter: blur(2px) saturate(0.6); }
   }
-  .win95Window.melting{ animation: meltDown 3.4s cubic-bezier(0.6,0,0.9,0.4) forwards; transform-origin: top center; }
+  .win95Window.melting{
+    animation: meltDown 3.4s cubic-bezier(0.6,0,0.9,0.4) forwards; transform-origin: top center;
+    will-change: transform, filter, opacity;
+  }
   .win95Window.melting::after{
     content:""; position:absolute; left:10%; right:10%; bottom:-2px; height:0;
     background: linear-gradient(180deg, rgba(180,255,220,0.9) 0%, rgba(120,180,255,0.55) 40%, rgba(255,255,255,0) 100%);
@@ -1064,12 +1089,12 @@
   // ============================================================
   const state = {
     phase: 0, started: false, intervals: {}, timeouts: {},
-    notifMode: 'stacked', stackedCount: 0, chaosZ: 20, lastChaosPos: null,
+    notifMode: 'stacked', stackedCount: 0, chaosZ: 20, lastChaosPos: null, liveToasts: [],
     dialogShown: false, dialogAttempted: false, chaosInterval: 0, rebootDialogShown: false,
     pendingAudioUnlock: false,
     escapeCycleInterval: null,
     fx: { glitchActive:false, glitchStart:0, figureFlashes:[], trapped:{ active:false, start:0 } },
-    p2: { answered:false, dissolving:false, videoActive:false, videoEl:null, ghost:{ x:0, y:0, targetX:0, targetY:0 } },
+    p2: { answered:false, dissolving:false, videoActive:false, videoPrimed:false, videoEnded:false, videoEl:null, ghost:{ x:0, y:0, targetX:0, targetY:0 } },
     p3: { clockActive:false, clock:{ x:0, y:0, vx:0, vy:0, r:60, lastT:0 } }
   };
 
@@ -1079,6 +1104,14 @@
   const STACKED_SPAWN_INITIAL_DELAY_MS = 2500;
   const DISMISS_DIALOG_DELAY_MS = 12000;
   const STACK_VISIBLE_MAX = 8;
+  // tetto duro ai nodi .notifToast vivi in modalità chaotic: l'auto-rimozione a 3200ms
+  // (vedi spawnNotification) da sola non basta a limitare il picco quando l'utente martella
+  // la tastiera più in fretta di quanto i nodi scadano — ogni keydown in chaotic chiama
+  // spawnNotification() indipendentemente dall'intervallo automatico, quindi il numero di
+  // nodi vivi in un dato istante non è altrimenti limitato. Margine oltre STACK_VISIBLE_MAX
+  // (le notifiche stacked visibili prima del caos) per restare coerente con la densità già
+  // vista in quella fase, senza intaccarla
+  const CHAOS_MAX_LIVE_TOASTS = STACK_VISIBLE_MAX + 4;
   const CHAOS_SPAWN_INTERVAL_START_MS = 700;
   const CHAOS_SPAWN_INTERVAL_MIN_MS = 220;
   const CHAOS_ACCEL_STEP_MS = 35;
@@ -1102,6 +1135,14 @@
   const P2_EXIT_IDLE_MS = 60000;
   const P2_BSOD_EMPTY_PAUSE_MS = 1000;
   const P2_EXIT_SCREEN_HOLD_MS = 500;
+  // reti di sicurezza per il video (vedi openP2Video): se in standalone iOS il video
+  // restasse comunque nero o si bloccasse, l'esperienza deve proseguire da sola invece
+  // di restare bloccata con solo AUDIO_6 in sottofondo
+  const P2_VIDEO_START_TIMEOUT_MS = 4000;
+  // fallback usato solo se 'loadedmetadata' non fornisce mai una duration valida: il
+  // video dura realmente ~36.7s (vedi commento AUDIO_6 più sotto), qui abbondante margine
+  const P2_VIDEO_END_FALLBACK_MS = 45000;
+  const P2_VIDEO_END_MARGIN_MS = 2000;
 
   const P3_LINE_TEXT = 'Vai alla pagina 19 del manuale.';
   const P3_LINE_GAP_START_MS = 260;
@@ -1136,20 +1177,77 @@
     'AUDIO_5.mp3', 'AUDIO_6.mp3', 'AUDIO_7.mp3',
     'suono_notifiche.mp3', 'pulsante.mp3'
   ];
+
+  // ------------------------------------------------------------
+  // SFX brevi e ripetuti (blip notifica, click tasto) via Web Audio API invece di
+  // `new Audio().play()`: su iPad, sotto il carico della fase caotica, allocare e
+  // decodificare un nuovo elemento <audio> ad ogni singolo evento introduce latenza e
+  // micro-scatti percepibili. Con Web Audio il file è decodificato UNA volta in
+  // warmAudio() in un AudioBuffer, e ogni evento crea solo un BufferSourceNode leggero
+  // (nessuna nuova richiesta di rete, nessuna nuova decodifica) — suoni sovrapponibili
+  // esattamente come prima, ma a costo quasi nullo. playCue/#p2AmbientAudio non sono
+  // toccati: i cue di fase sono lunghi, sequenziali e non ripetuti ad alta frequenza,
+  // quindi restano su <audio>, dove loop/pause/currentTime sono già gestiti comodamente
+  const AudioCtxCtor = window.AudioContext || window.webkitAudioContext;
+  const audioCtx = AudioCtxCtor ? new AudioCtxCtor() : null;
+  const sfxBuffers = { 'suono_notifiche.mp3': null, 'pulsante.mp3': null };
+
+  // ripreso dentro il primo gesto reale (vedi pendingAudioUnlock nel keydown globale):
+  // su iOS un AudioContext nasce "suspended" finché un gesto utente non lo sblocca,
+  // esattamente come per l'autoplay di <audio>/<video>
+  function resumeAudioCtx(){
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  }
+
+  // decodifica una sola volta i due SFX brevi in AudioBuffer; può avvenire anche a
+  // context sospeso (decodeAudioData non richiede un context "running"). Se AudioContext
+  // non esiste o la decodifica fallisce, sfxBuffers resta null per quel suono e
+  // playButtonSfx/playNotifBlip ripiegano sul vecchio new Audio().play()
+  function warmSfxBuffers(){
+    if (!audioCtx) return;
+    Object.keys(sfxBuffers).forEach(src => {
+      fetch(src)
+        .then(res => res.arrayBuffer())
+        .then(data => audioCtx.decodeAudioData(data))
+        .then(buffer => { sfxBuffers[src] = buffer; })
+        .catch(() => {}); // fallback: resta null, playXxxSfx usa new Audio()
+    });
+  }
+
+  // riscalda anche la cache HTTP "tradizionale" per i cue lunghi su <audio> (AUDIO_1..7):
+  // i due SFX brevi sono esclusi da questo giro solo se warmSfxBuffers() li copre già col
+  // proprio fetch (evita di scaricarli due volte) — se l'AudioContext non è disponibile,
+  // warmSfxBuffers() non fa nulla e i due SFX restano nel giro tradizionale, altrimenti
+  // resterebbero completamente non riscaldati (playButtonSfx/playNotifBlip userebbero
+  // comunque new Audio() come fallback, ma a piena latenza di rete al primo utilizzo)
   function warmAudio(){
-    AUDIO_ASSETS.forEach(src => {
+    AUDIO_ASSETS.filter(src => !audioCtx || !(src in sfxBuffers)).forEach(src => {
       const a = new Audio(src);
       a.preload = 'auto';
       a.load();
     });
+    warmSfxBuffers();
   }
   warmAudio();
 
-  // comparsa di una notifica (spawnNotification, sia stacked che chaotic): nuova
-  // istanza Audio ad ogni chiamata, stesso modello di playButtonSfx, così notifiche
-  // ravvicinate (fino a CHAOS_SPAWN_INTERVAL_MIN_MS in modalità chaotic) si sovrappongono
-  // invece di tagliarsi il suono a vicenda
+  // suona un AudioBuffer già decodificato con un BufferSourceNode nuovo (si scarta da
+  // solo a fine riproduzione): zero allocazione di elementi, sovrapponibile a piacere
+  function playBuffer(buffer){
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioCtx.destination);
+    source.start(0);
+  }
+
+  // comparsa di una notifica (spawnNotification, sia stacked che chaotic): via
+  // Web Audio quando il buffer è pronto, altrimenti new Audio() come prima, così
+  // notifiche ravvicinate (fino a CHAOS_SPAWN_INTERVAL_MIN_MS in modalità chaotic) si
+  // sovrappongono invece di tagliarsi il suono a vicenda
   function playNotifBlip(){
+    const buffer = sfxBuffers['suono_notifiche.mp3'];
+    if (audioCtx && buffer) {
+      try { playBuffer(buffer); return; } catch (e) {}
+    }
     new Audio('suono_notifiche.mp3').play().catch(() => {});
   }
 
@@ -1168,10 +1266,14 @@
   }
 
   // feedback di pressione tasto in Fase 1 (vedi listener keydown globale più sotto):
-  // una nuova istanza Audio ad ogni chiamata, mai #p2AmbientAudio, così pressioni
-  // ravvicinate non si tagliano il suono a vicenda e non interrompono/riavviano per
-  // errore il cue ambientale in corso su quel player condiviso
+  // via Web Audio quando il buffer è pronto (mai #p2AmbientAudio), altrimenti new Audio()
+  // come prima, così pressioni ravvicinate non si tagliano il suono a vicenda e non
+  // interrompono/riavviano per errore il cue ambientale in corso su quel player condiviso
   function playButtonSfx(){
+    const buffer = sfxBuffers['pulsante.mp3'];
+    if (audioCtx && buffer) {
+      try { playBuffer(buffer); return; } catch (e) {}
+    }
     new Audio('pulsante.mp3').play().catch(() => {});
   }
 
@@ -1235,9 +1337,25 @@
       state.lastChaosPos = { top, left };
     }
     layer.appendChild(toast);
-    setTimeout(() => toast.remove(), 3200);
+    const entry = { el: toast, timeoutId: null };
+    entry.timeoutId = setTimeout(() => removeToast(entry), 3200);
+    state.liveToasts.push(entry);
+    if (state.notifMode === 'chaotic') {
+      // rimuove subito le più vecchie oltre il tetto, invece di aspettare i 3200ms:
+      // è questo il limite che tiene bassi i nodi .notif* vivi quando i keydown manuali
+      // superano il ritmo dell'intervallo automatico
+      while (state.liveToasts.length > CHAOS_MAX_LIVE_TOASTS) {
+        removeToast(state.liveToasts[0]);
+      }
+    }
     state.stackedCount++;
     playNotifBlip();
+  }
+  function removeToast(entry){
+    clearTimeout(entry.timeoutId);
+    entry.el.remove();
+    const idx = state.liveToasts.indexOf(entry);
+    if (idx !== -1) state.liveToasts.splice(idx, 1);
   }
   function scheduleNextNotification(delay){
     state.timeouts.notif = setTimeout(() => {
@@ -1590,13 +1708,64 @@
   function preloadP2Video(){
     const v = document.createElement('video');
     v.id = 'p2VideoPreload';
-    v.src = 'media/Sequenza-01.mp4';
-    v.preload = 'auto';
     v.muted = true;
+    // attributo, non solo proprietà JS: iOS Safari in standalone legge questi in fase di
+    // parsing/selezione della risorsa, prima ancora che lo script possa impostare le
+    // proprietà — playsinline (+ prefisso webkit legacy) evita il fullscreen automatico,
+    // muted consente l'autoplay del video una volta sbloccato dal gesto (vedi primeP2Video)
+    v.setAttribute('muted', '');
     v.playsInline = true;
+    v.setAttribute('playsinline', '');
+    v.setAttribute('webkit-playsinline', '');
+    v.preload = 'auto';
+    v.src = 'media/Sequenza-01.mp4';
     v.style.display = 'none';
     document.body.appendChild(v);
+    // esplicito dopo aver impostato src e attributi: assicura che l'algoritmo di
+    // selezione della risorsa riparta con tutto già in posizione, invece di affidarsi
+    // solo all'avvio implicito scatenato dall'assegnazione di .src
+    v.load();
     state.p2.videoEl = v;
+  }
+
+  // sblocca il <video> dentro un gesto utente reale, prima ancora che serva: in Safari
+  // "da tab" il muted-autoplay programmato basta (come presupponeva il vecchio commento
+  // qui sotto), ma in standalone (icona Home) iOS applica una policy più severa e blocca
+  // comunque video.play() se non parte da un gesto — openP2Video, invece, scatta sempre
+  // da un timer (resetP2ExitTimer o la catena di stabilizeThenDissolve), mai da un
+  // keydown diretto. Chiamata una sola volta al primo keydown reale di Fase 2 (vedi
+  // handlePhase2Keydown): un play() immediatamente pausato dentro quel gesto sblocca il
+  // video per tutte le play() successive, comprese quelle innescate da un timer
+  function primeP2Video(){
+    if (state.p2.videoPrimed) return;
+    state.p2.videoPrimed = true;
+    const video = state.p2.videoEl;
+    if (!video) return;
+    // il video vive già nel DOM (preloadP2Video lo appende a document.body), ma con
+    // display:none — su iOS un elemento senza layout box spesso non riproduce affatto,
+    // quindi lo si rende brevemente "riproducibile" (1×1, fuori schermo, opacity:0) senza
+    // alcun flash visibile, poi si ripristina lo stato originale
+    const restoreDisplay = video.style.display;
+    video.style.position = 'fixed';
+    video.style.left = '-9999px';
+    video.style.top = '0';
+    video.style.width = '1px';
+    video.style.height = '1px';
+    video.style.opacity = '0';
+    video.style.display = '';
+    try {
+      const p = video.play();
+      if (p && p.catch) p.catch(() => {});
+      video.pause();
+      video.currentTime = 0;
+    } catch (e) {}
+    video.style.display = restoreDisplay;
+    video.style.position = '';
+    video.style.left = '';
+    video.style.top = '';
+    video.style.width = '';
+    video.style.height = '';
+    video.style.opacity = '';
   }
 
   // apre la finestra video nello stesso istante in cui la risposta è del tutto sparita
@@ -1604,6 +1773,7 @@
   // (resetP2ExitTimer) — qui parte anche AUDIO_6, il cue del video, vedi più sotto
   function openP2Video(){
     state.p2.videoActive = true;
+    state.p2.videoEnded = false;
     // durante il video (e la schermata EXIT che segue) la tastiera non deve avere alcun
     // effetto, incluso il timer "resisti per uscire": altrimenti un tasto premuto per
     // curiosità mentre si guarda potrebbe far scattare goToPhase3 a metà video
@@ -1612,8 +1782,52 @@
     const video = state.p2.videoEl;
     video.style.display = '';
     document.getElementById('p2VideoBody').appendChild(video);
-    video.currentTime = 0;
+    // impostare currentTime prima che il video sia pronto può fallire silenziosamente in
+    // standalone iOS: lo si fa solo quando i dati sono già disponibili, altrimenti si
+    // aspetta 'loadeddata' — mai un try/catch a vuoto su un valore che l'engine ignora
+    if (video.readyState >= 2) {
+      try { video.currentTime = 0; } catch (e) {}
+    } else {
+      video.addEventListener('loadeddata', function onLoadedData(){
+        video.removeEventListener('loadeddata', onLoadedData);
+        try { video.currentTime = 0; } catch (e) {}
+      }, { once: true });
+    }
     video.addEventListener('ended', onP2VideoEnded, { once:true });
+    // stesso percorso di 'ended': se il video fallisce a runtime non deve bloccare
+    // l'esperienza, semplicemente prosegue come se fosse arrivato in fondo
+    video.addEventListener('error', onP2VideoEnded, { once:true });
+
+    // watchdog d'avvio: se entro P2_VIDEO_START_TIMEOUT_MS non arriva mai 'playing' (video
+    // ancora bloccato nonostante lo sblocco in primeP2Video, o un problema di rete), non
+    // deve restare nero all'infinito — avanza da solo, stesso percorso di fine naturale
+    function onPlaying(){
+      clearTimeout(state.timeouts.p2VideoStartWatchdog);
+    }
+    video.addEventListener('playing', onPlaying, { once:true });
+    state.timeouts.p2VideoStartWatchdog = setTimeout(() => {
+      video.removeEventListener('playing', onPlaying);
+      onP2VideoEnded();
+    }, P2_VIDEO_START_TIMEOUT_MS);
+
+    // watchdog di fine: rete di sicurezza nel caso 'ended' non scatti mai — usa la durata
+    // reale del video appena disponibile (via 'loadedmetadata'), altrimenti un fallback
+    // fisso abbondante finché non lo è
+    function armEndWatchdog(ms){
+      clearTimeout(state.timeouts.p2VideoEndWatchdog);
+      state.timeouts.p2VideoEndWatchdog = setTimeout(onP2VideoEnded, ms);
+    }
+    if (video.readyState >= 1 && isFinite(video.duration) && video.duration > 0) {
+      armEndWatchdog(video.duration * 1000 + P2_VIDEO_END_MARGIN_MS);
+    } else {
+      armEndWatchdog(P2_VIDEO_END_FALLBACK_MS);
+      video.addEventListener('loadedmetadata', function onMeta(){
+        video.removeEventListener('loadedmetadata', onMeta);
+        if (isFinite(video.duration) && video.duration > 0) {
+          armEndWatchdog(video.duration * 1000 + P2_VIDEO_END_MARGIN_MS);
+        }
+      }, { once:true });
+    }
 
     const win = document.getElementById('p2VideoWindow');
     win.classList.add('atDoor');
@@ -1626,12 +1840,11 @@
         win.classList.remove('atDoor');
       });
     });
-    // muto quindi l'autoplay è permesso ovunque anche senza gesto utente sincrono, ma
-    // .play() viene comunque chiamato esplicitamente invece di affidarsi al solo autoplay.
-    // .catch() silenzioso: alcuni browser possono rifiutare la Promise (es. throttling del
-    // risparmio energetico su una scheda in background) senza che sia un errore reale da
-    // mostrare — non aggiunge un secondo tentativo automatico, solo evita una rejection
-    // non gestita in console
+    // già sbloccato da primeP2Video() al primo keydown di Fase 2: qui il play() vero e
+    // proprio parte davvero anche in standalone. .catch() silenzioso: alcuni browser
+    // possono comunque rifiutare la Promise (es. throttling del risparmio energetico su
+    // una scheda in background) senza che sia un errore reale da mostrare — il watchdog
+    // d'avvio copre già il caso in cui 'playing' non arrivi mai
     video.play().catch(() => {});
 
     // AUDIO_6 (56s) dura più del video (36,7s): prosegue oltre la fine del video fino
@@ -1641,6 +1854,17 @@
   }
 
   function onP2VideoEnded(){
+    // idempotente: 'ended', 'error' e i due watchdog possono tutti convergere qui,
+    // anche più di una volta per lo stesso video — deve eseguire una sola volta
+    if (state.p2.videoEnded) return;
+    state.p2.videoEnded = true;
+    clearTimeout(state.timeouts.p2VideoStartWatchdog);
+    clearTimeout(state.timeouts.p2VideoEndWatchdog);
+    const video = state.p2.videoEl;
+    if (video) {
+      video.removeEventListener('ended', onP2VideoEnded);
+      video.removeEventListener('error', onP2VideoEnded);
+    }
     document.getElementById('p2VideoWindow').classList.remove('visible');
     document.getElementById('p2ExitScreen').classList.add('visible');
     state.timeouts.p2ExitScreenHold = setTimeout(goToPhase3, P2_EXIT_SCREEN_HOLD_MS);
@@ -1745,6 +1969,9 @@
     // video e schermata EXIT non reagiscono a nessun tasto, incluso il reset del timer
     // d'uscita — vedi openP2Video()
     if (state.p2.videoActive) return;
+    // primo keydown reale di Fase 2: sblocca il video dentro il gesto, prima che serva
+    // davvero (openP2Video parte sempre da un timer, mai da qui) — vedi primeP2Video()
+    primeP2Video();
     resetP2ExitTimer();
     if (state.p2.answered || state.p2.dissolving) return;
 
@@ -1769,6 +1996,8 @@
     state.p2.answered = false;
     state.p2.dissolving = false;
     state.p2.videoActive = false;
+    state.p2.videoPrimed = false;
+    state.p2.videoEnded = false;
     document.getElementById('p2Answer').querySelectorAll('.p2-char').forEach(c => c.remove());
     document.getElementById('p2StillHere').classList.remove('visible');
     document.getElementById('p2Echo').classList.remove('pulse');
@@ -2064,6 +2293,12 @@
   // INPUT — SOLO tastiera reale
   // ============================================================
   window.addEventListener('keydown', function(e){
+    // sblocco dell'AudioContext (SFX via Web Audio): su iOS nasce "suspended" finché un
+    // gesto utente non lo riprende, sia sul primo avvio reale (Fase 0) sia sul percorso
+    // res_skip_intro. Chiamata ad ogni keydown, non solo al primo: resume() su un context
+    // già "running" è a costo pressoché nullo, e così il gesto giusto scatta comunque sia
+    // il primissimo tasto della sessione (qualunque percorso lo generi)
+    resumeAudioCtx();
     // sblocco audio del percorso res_skip_intro (vedi goToPhase1({ deferAudio:true })):
     // il PRIMO keydown reale dopo il reload fa partire qui AUDIO_1 in loop, dentro il
     // gesto, prima di qualunque altra logica di fase — una volta sola (idempotente).
