@@ -49,7 +49,7 @@
   #phase0 .noSignal{
     font-family:'VT323', monospace;
     color: var(--phosphor);
-    font-size: clamp(2.45rem, 9vw, 3.85rem);
+    font-size: clamp(2.75rem, 10vw, 4.2rem);
     letter-spacing: 0.08em;
     text-shadow: 0 0 6px rgba(57,255,20,0.55), 0 0 14px rgba(57,255,20,0.25);
     animation: blinkSignal 1.1s steps(1, end) infinite;
@@ -58,7 +58,7 @@
     font-family:'VT323', monospace;
     color: var(--phosphor);
     opacity:0.75;
-    font-size: clamp(1.1rem, 2.6vw, 1.35rem);
+    font-size: clamp(1.3rem, 3vw, 1.6rem);
     letter-spacing:0.05em;
     margin-top: 0.6em;
   }
@@ -210,10 +210,16 @@
   #rebootDialog .win95Body{ text-align:center; padding:16px 10px; }
 
   /* finestra "Escape": stesso bevel/chrome delle altre, campo colore Pantone 485C esatto.
-     Ancorata in basso a destra, sollevata (bottom:770px) abbastanza da restare sempre sopra
-     la pila di notifiche stacked (fino a 8 × 92px ≈ 750px di altezza dal basso, vedi STACK_VISIBLE_MAX) */
+     Ancorata in basso a destra, sollevata abbastanza da restare sempre sopra la pila di
+     notifiche stacked (fino a 8 × 92px ≈ 750px di altezza dal basso, vedi STACK_VISIBLE_MAX).
+     bottom:770px da solo presuppone un viewport molto alto: su iPad verticale con altezza
+     utile ridotta (barre di Safari, multitasking) finirebbe sopra il bordo superiore,
+     invisibile. Il clamp con 100dvh (non 100vh, per le barre dinamiche di iOS) la fissa a
+     ~300px dal bordo inferiore del viewport quando lo schermo è più basso di ~1070px:
+     resta così sempre interamente visibile, sotto #clockWindow (top:10px) e sopra la
+     zona da cui salgono le notifiche impilate quando c'è spazio */
   #escapeWindow{
-    display:none; position:absolute; right:10px; bottom:770px;
+    display:none; position:absolute; right:10px; bottom: min(770px, calc(100dvh - 300px));
     width:260px; z-index:94;
   }
   #escapeWindow.visible{ display:block; }
@@ -426,6 +432,12 @@
   #phase2 .p2Sky{
     position:absolute; left:0; right:0; top:0; height:49%; z-index:1;
     overflow:hidden; padding:8vh 6vw 0;
+    /* padding-left maggiorato: .desktopIcons (top:14px, left:14px, colonna ~84px,
+       z-index:2) resta sopra e ferma dov'è (voluto) — è il testo del log che deve
+       spostarsi per non finirci sotto. clamp(100px,12vw,160px) supera sempre la
+       colonna icone (~84px) con un margine, restando comunque proporzionato su schermi
+       più larghi invece di un valore fisso */
+    padding-left: clamp(100px, 12vw, 160px);
     pointer-events:none;
     display:flex; flex-direction:column;
   }
@@ -775,7 +787,7 @@
 
     <!-- Elemento condiviso dai 6 cue audio a eventi (AUDIO_1..AUDIO_6.mp3): src cambiato
          al volo da playCue(), mai un unico brano continuo — vedi la sezione AUDIO più sotto -->
-    <audio id="p2AmbientAudio" preload="none"></audio>
+    <audio id="p2AmbientAudio" preload="auto"></audio>
   </div>
 
   <div id="phase3" class="phase">
@@ -1054,6 +1066,7 @@
     phase: 0, started: false, intervals: {}, timeouts: {},
     notifMode: 'stacked', stackedCount: 0, chaosZ: 20, lastChaosPos: null,
     dialogShown: false, dialogAttempted: false, chaosInterval: 0, rebootDialogShown: false,
+    pendingAudioUnlock: false,
     escapeCycleInterval: null,
     fx: { glitchActive:false, glitchStart:0, figureFlashes:[], trapped:{ active:false, start:0 } },
     p2: { answered:false, dissolving:false, videoActive:false, videoEl:null, ghost:{ x:0, y:0, targetX:0, targetY:0 } },
@@ -1112,6 +1125,26 @@
   // ============================================================
   // AUDIO
   // ============================================================
+  // riscalda la cache HTTP di tutti gli asset audio durante l'attesa di Fase 0 (nessun
+  // .play(), solo .load(): mai una violazione delle policy di autoplay iOS). Chiamata
+  // una sola volta, subito, indipendentemente dal percorso di avvio: sul primo avvio
+  // sfrutta il tempo in cui l'utente guarda "NESSUN SEGNALE"; sul reload (res_skip_intro)
+  // il fetch parte comunque appena il DOM è pronto, un attimo prima del primo gesto reale
+  // che sblocca il playCue vero e proprio — vedi state.pendingAudioUnlock più sotto
+  const AUDIO_ASSETS = [
+    'AUDIO_1.mp3', 'AUDIO_2.mp3', 'AUDIO_3.mp3', 'AUDIO_4.mp3',
+    'AUDIO_5.mp3', 'AUDIO_6.mp3', 'AUDIO_7.mp3',
+    'suono_notifiche.mp3', 'pulsante.mp3'
+  ];
+  function warmAudio(){
+    AUDIO_ASSETS.forEach(src => {
+      const a = new Audio(src);
+      a.preload = 'auto';
+      a.load();
+    });
+  }
+  warmAudio();
+
   // comparsa di una notifica (spawnNotification, sia stacked che chaotic): nuova
   // istanza Audio ad ogni chiamata, stesso modello di playButtonSfx, così notifiche
   // ravvicinate (fino a CHAOS_SPAWN_INTERVAL_MIN_MS in modalità chaotic) si sovrappongono
@@ -1179,8 +1212,14 @@
       toast.style.bottom = (10 + stackIndex * 92) + 'px';
     } else {
       // z-index via via crescente e un piccolo offset rispetto alla precedente,
-      // così le notifiche si accumulano parzialmente invece di restare sempre separate
-      state.chaosZ++;
+      // così le notifiche si accumulano parzialmente invece di restare sempre separate.
+      // Ricicla il contatore entro [21,89] invece di crescere all'infinito: la fase
+      // caotica può generarne centinaia (interval che scende fino a CHAOS_SPAWN_INTERVAL_MIN_MS,
+      // più ogni pressione di tasto) e uno z-index sempre crescente finirebbe per superare
+      // #escapeWindow (z-index:94), coprendola. Il tetto di 89 resta ben sopra le ~14 toast
+      // al massimo simultaneamente visibili (si rimuovono dopo 3200ms) mantenendo intatto
+      // l'effetto di accumulo, e sotto #escapeWindow / #terminalOverlay / #rebootDialog
+      state.chaosZ = state.chaosZ >= 89 ? 21 : state.chaosZ + 1;
       toast.style.zIndex = state.chaosZ;
       let top, left;
       if (state.lastChaosPos && Math.random() < 0.65) {
@@ -1820,18 +1859,27 @@
   // ============================================================
   // TRANSIZIONI DI FASE
   // ============================================================
-  function goToPhase1(){
+  function goToPhase1(opts){
     if (state.started) return;
     state.started = true;
     state.phase = 1;
     document.getElementById('phase0').classList.remove('active');
     document.getElementById('phase1').classList.add('active');
     FX.resize();
-    // AUDIO_1 (loop): stesso gesture che ha appena fatto scattare questo passaggio di
-    // fase, quindi già "sbloccato" rispetto alle policy di autoplay dei browser
-    // (chiamata sincrona dentro l'handler del keydown) — resta in loop per tutta la
-    // Fase 1, finché non lo sostituisce AUDIO_2 in handleDismissAttempt()
-    playCue('AUDIO_1.mp3', { loop: true });
+    if (opts && opts.deferAudio) {
+      // richiamata dal bootstrap res_skip_intro (fuori da qualunque gesto utente): un
+      // playCue qui verrebbe bloccato dall'autoplay iOS e l'audio resterebbe silenzioso
+      // finché AUDIO_2 non lo sostituisce in handleDismissAttempt, molti secondi dopo.
+      // Si rimanda invece l'avvio del loop al primo keydown reale — vedi
+      // state.pendingAudioUnlock nel listener keydown globale in fondo al file
+      state.pendingAudioUnlock = true;
+    } else {
+      // AUDIO_1 (loop): stesso gesture che ha appena fatto scattare questo passaggio di
+      // fase, quindi già "sbloccato" rispetto alle policy di autoplay dei browser
+      // (chiamata sincrona dentro l'handler del keydown) — resta in loop per tutta la
+      // Fase 1, finché non lo sostituisce AUDIO_2 in handleDismissAttempt()
+      playCue('AUDIO_1.mp3', { loop: true });
+    }
     scheduleNextNotification(STACKED_SPAWN_INITIAL_DELAY_MS);
     state.timeouts.dialog = setTimeout(showDismissDialog, DISMISS_DIALOG_DELAY_MS);
     preloadP2Video();
@@ -2016,6 +2064,14 @@
   // INPUT — SOLO tastiera reale
   // ============================================================
   window.addEventListener('keydown', function(e){
+    // sblocco audio del percorso res_skip_intro (vedi goToPhase1({ deferAudio:true })):
+    // il PRIMO keydown reale dopo il reload fa partire qui AUDIO_1 in loop, dentro il
+    // gesto, prima di qualunque altra logica di fase — una volta sola (idempotente).
+    // Non tocca il percorso di primo avvio, dove pendingAudioUnlock resta sempre false
+    if (state.pendingAudioUnlock) {
+      state.pendingAudioUnlock = false;
+      playCue('AUDIO_1.mp3', { loop: true });
+    }
     if (state.phase === 0) {
       goToPhase1();
     } else if (state.phase === 1) {
@@ -2060,7 +2116,10 @@
   // sempre iniziare da Fase 0, come una prima visita reale)
   if (sessionStorage.getItem('res_skip_intro')){
     sessionStorage.removeItem('res_skip_intro');
-    goToPhase1();
+    // deferAudio:true — questa chiamata avviene durante l'init dello script, fuori da
+    // qualunque gesto utente: l'avvio del loop AUDIO_1 è rimandato al primo keydown
+    // reale (vedi state.pendingAudioUnlock nel listener keydown globale qui sopra)
+    goToPhase1({ deferAudio: true });
   }
 
 })();
